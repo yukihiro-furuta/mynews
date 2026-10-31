@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Article } from './api/news/route';
 import PushNotificationButton from '@/components/PushNotificationButton';
@@ -48,6 +48,7 @@ export default function Home() {
   const [error, setError]         = useState(false);
   const [filter, setFilter]       = useState<string>('all');
   const [savedIds, setSavedIds]   = useState<Set<string>>(new Set());
+  const touchStartX = useRef<number | null>(null);
 
   // ニュース取得
   useEffect(() => {
@@ -79,6 +80,26 @@ export default function Home() {
     }
     localStorage.setItem('saved_articles', JSON.stringify(next));
     setSavedIds(new Set(next.map((a) => a.id)));
+  }
+
+  function switchTab(direction: 'left' | 'right') {
+    const currentIndex = FILTERS.findIndex((f) => f.key === filter);
+    const nextIndex =
+      direction === 'left'
+        ? Math.min(currentIndex + 1, FILTERS.length - 1)
+        : Math.max(currentIndex - 1, 0);
+    setFilter(FILTERS[nextIndex].key);
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) switchTab(diff > 0 ? 'left' : 'right');
+    touchStartX.current = null;
   }
 
   const filtered =
@@ -116,7 +137,11 @@ export default function Home() {
       </div>
 
       {/* 記事一覧 */}
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+      <div
+        className="max-w-2xl mx-auto px-4 py-4 space-y-3"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
 
         {loading && (
           <p className="text-center text-gray-500 py-16">ニュースを読み込み中...</p>
