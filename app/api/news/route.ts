@@ -30,8 +30,20 @@ const FEEDS: {
   categoryLabel: string;
 }[] = [
   {
-    url: 'https://www.nhk.or.jp/rss/news/cat3.xml',
-    source: 'NHK',
+    url: 'https://toyokeizai.net/list/feed/rss',
+    source: '東洋経済オンライン',
+    category: 'eco',
+    categoryLabel: '💹 経済',
+  },
+  {
+    url: 'https://diamond.jp/list/feed/rss',
+    source: 'ダイヤモンド・オンライン',
+    category: 'eco',
+    categoryLabel: '💹 経済',
+  },
+  {
+    url: 'https://www.businessinsider.jp/feed/index.xml',
+    source: 'Business Insider Japan',
     category: 'eco',
     categoryLabel: '💹 経済',
   },
@@ -48,14 +60,14 @@ const FEEDS: {
     categoryLabel: '🚀 スタートアップ',
   },
   {
-    url: 'https://www.nhk.or.jp/shizuoka/lnews/rss.xml',
-    source: 'NHK静岡',
+    url: 'https://news.google.com/rss/search?q=%E9%9D%99%E5%B2%A1+%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9&hl=ja&gl=JP&ceid=JP:ja',
+    source: 'Google News 静岡',
     category: 'shizuoka',
     categoryLabel: '📍 静岡',
   },
   {
-    url: 'https://www.nhk.or.jp/nagano/lnews/rss.xml',
-    source: 'NHK長野',
+    url: 'https://news.google.com/rss/search?q=%E9%95%B7%E9%87%8E+%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9&hl=ja&gl=JP&ceid=JP:ja',
+    source: 'Google News 長野',
     category: 'nagano',
     categoryLabel: '📍 長野',
   },
@@ -99,8 +111,8 @@ export async function GET() {
           image: extractImage(item),
         }));
         results.push(...items);
-      } catch {
-        // そのフィードだけスキップして他は表示継続
+      } catch (e) {
+        console.error(`[RSS失敗] ${feed.source} (${feed.url}):`, e);
       }
     })
   );
