@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Article } from './api/news/route';
+import PushNotificationButton from '@/components/PushNotificationButton';
 
 const CAT_STYLE: Record<
   Article['category'],
@@ -89,9 +90,12 @@ export default function Home() {
       {/* ヘッダー */}
       <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-blue-400">📰 MyNews</h1>
-        <span className="text-xs text-gray-500">
-          {loading ? '取得中...' : `${filtered.length}件`}
-        </span>
+        <div className="flex items-center gap-2">
+          <PushNotificationButton />
+          <span className="text-xs text-gray-500">
+            {loading ? '取得中...' : `${filtered.length}件`}
+          </span>
+        </div>
       </header>
 
       {/* フィルタータブ */}
