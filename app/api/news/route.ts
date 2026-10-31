@@ -30,8 +30,20 @@ const FEEDS: {
   categoryLabel: string;
 }[] = [
   {
-    url: 'https://www.nhk.or.jp/rss/news/cat3.xml',
-    source: 'NHK',
+    url: 'https://toyokeizai.net/list/feed/rss',
+    source: '東洋経済オンライン',
+    category: 'eco',
+    categoryLabel: '💹 経済',
+  },
+  {
+    url: 'https://diamond.jp/list/feed/rss',
+    source: 'ダイヤモンド・オンライン',
+    category: 'eco',
+    categoryLabel: '💹 経済',
+  },
+  {
+    url: 'https://www.businessinsider.jp/feed/index.xml',
+    source: 'Business Insider Japan',
     category: 'eco',
     categoryLabel: '💹 経済',
   },
