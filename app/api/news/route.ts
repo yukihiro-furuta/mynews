@@ -48,14 +48,26 @@ const FEEDS: {
     categoryLabel: '💹 経済',
   },
   {
-    url: 'https://jp.techcrunch.com/feed/',
-    source: 'TechCrunch Japan',
+    url: 'https://thebridge.jp/feed',
+    source: 'THE BRIDGE',
     category: 'startup',
     categoryLabel: '🚀 スタートアップ',
   },
   {
-    url: 'https://thebridge.jp/feed',
-    source: 'THE BRIDGE',
+    url: 'https://sogyotecho.jp/feed/',
+    source: '創業手帳',
+    category: 'startup',
+    categoryLabel: '🚀 スタートアップ',
+  },
+  {
+    url: 'https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml',
+    source: 'ITmedia NEWS',
+    category: 'startup',
+    categoryLabel: '🚀 スタートアップ',
+  },
+  {
+    url: 'https://techcrunch.com/feed/',
+    source: 'TechCrunch',
     category: 'startup',
     categoryLabel: '🚀 スタートアップ',
   },
@@ -123,5 +135,12 @@ export async function GET() {
     return db - da;
   });
 
-  return NextResponse.json(results);
+  const seenLinks = new Set<string>();
+  const deduplicated = results.filter((article) => {
+    if (article.link === '#' || seenLinks.has(article.link)) return false;
+    seenLinks.add(article.link);
+    return true;
+  });
+
+  return NextResponse.json(deduplicated);
 }
