@@ -16,12 +16,13 @@ export type Article = {
 type CustomItem = {
   'media:content'?: { $?: { url?: string }; url?: string };
   enclosure?: { url?: string };
+  'content:encoded'?: string;
   content?: string;
 };
 
 const parser = new Parser<Record<string, unknown>, CustomItem>({
   customFields: {
-    item: ['media:content', 'enclosure'],
+    item: ['media:content', 'enclosure', 'content:encoded'],
   },
 });
 
@@ -147,7 +148,7 @@ function extractImage(item: CustomItem): string | null {
   if (isValidImageUrl(mcUrl)) return mcUrl;
   const encUrl = item.enclosure?.url;
   if (isValidImageUrl(encUrl)) return encUrl;
-  return extractImageFromHtml(item.content);
+  return extractImageFromHtml(item['content:encoded']) ?? extractImageFromHtml(item.content);
 }
 
 export async function GET() {
