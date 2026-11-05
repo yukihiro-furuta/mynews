@@ -102,8 +102,8 @@ const FEEDS: {
     categoryLabel: '🌾 農業',
   },
   {
-    url: 'https://www.jacom.or.jp/rss/rss2.xml',
-    source: 'JA新聞',
+    url: 'https://news.yahoo.co.jp/rss/media/agrinews/all.xml',
+    source: '日本農業新聞',
     category: 'agri',
     categoryLabel: '🌾 農業',
   },
