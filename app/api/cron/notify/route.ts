@@ -26,10 +26,21 @@ export async function GET(req: NextRequest) {
   }
   webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
-  const subs = await readSubscriptions();
+  let subs: PushSubscriptionJSON[];
+  try {
+    subs = await readSubscriptions();
+  } catch (err) {
+    const kind = err instanceof Error ? err.constructor.name : typeof err;
+    console.error(`[notify] Redis読み取り失敗 kind=${kind}`);
+    return NextResponse.json({ error: "storage read failed" }, { status: 500 });
+  }
+
   if (subs.length === 0) {
+    console.log("[notify] 購読なし、送信スキップ");
     return NextResponse.json({ sent: 0 });
   }
+
+  console.log(`[notify] 開始 total=${subs.length}`);
 
   const payload = JSON.stringify({
     title: `MyNews ${getGreeting()}`,
@@ -42,6 +53,25 @@ export async function GET(req: NextRequest) {
     subs.map((sub) => webpush.sendNotification(sub as Parameters<typeof webpush.sendNotification>[0], payload))
   );
 
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      try {
+        const reason = r.reason;
+        const statusCode =
+          reason !== null &&
+          reason !== undefined &&
+          typeof reason === "object" &&
+          typeof (reason as Record<string, unknown>).statusCode === "number"
+            ? (reason as { statusCode: number }).statusCode
+            : "unknown";
+        const kind = reason instanceof Error ? reason.constructor.name : typeof reason;
+        console.error(`[notify] 送信失敗 index=${i} status=${statusCode} kind=${kind}`);
+      } catch {
+        console.error(`[notify] 送信失敗 index=${i} status=unknown kind=unknown`);
+      }
+    }
+  });
+
   // 無効な購読を削除
   const valid = subs.filter((_, i) => {
     const r = results[i];
@@ -51,10 +81,22 @@ export async function GET(req: NextRequest) {
     }
     return true;
   });
-  if (valid.length !== subs.length) {
-    await writeSubscriptions(valid);
+
+  const removed = subs.length - valid.length;
+
+  if (removed > 0) {
+    try {
+      await writeSubscriptions(valid);
+    } catch (err) {
+      const kind = err instanceof Error ? err.constructor.name : typeof err;
+      console.error(`[notify] Redis書き込み失敗 kind=${kind}`);
+    }
   }
 
   const sent = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results.length - sent;
+
+  console.log(`[notify] 完了 sent=${sent} failed=${failed} removed=${removed}`);
+
   return NextResponse.json({ sent, total: subs.length });
 }
