@@ -7,6 +7,37 @@ function getGreeting() {
   return hour < 12 ? "おはようございます" : "お疲れ様です";
 }
 
+const KNOWN_PUSH_REASONS = new Set([
+  "BadJwtToken", "ExpiredToken", "BadDeviceToken",
+  "Forbidden", "Unregistered", "DeviceTokenNotForTopic",
+  "InvalidRegistration", "NotRegistered", "MismatchSenderId",
+]);
+
+function safeExtractPushReason(reason: unknown): string {
+  try {
+    if (reason === null || reason === undefined || typeof reason !== "object") {
+      return "unknown";
+    }
+    const body = (reason as Record<string, unknown>).body;
+    if (typeof body !== "string" || body.length === 0) {
+      return "unknown";
+    }
+    const parsed: unknown = JSON.parse(body);
+    if (parsed === null || typeof parsed !== "object") {
+      return "unknown";
+    }
+    const raw =
+      (parsed as Record<string, unknown>).reason ??
+      (parsed as Record<string, unknown>).error;
+    if (typeof raw === "string" && KNOWN_PUSH_REASONS.has(raw)) {
+      return raw;
+    }
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -65,9 +96,10 @@ export async function GET(req: NextRequest) {
             ? (reason as { statusCode: number }).statusCode
             : "unknown";
         const kind = reason instanceof Error ? reason.constructor.name : typeof reason;
-        console.error(`[notify] 送信失敗 index=${i} status=${statusCode} kind=${kind}`);
+        const pushReason = safeExtractPushReason(reason);
+        console.error(`[notify] 送信失敗 index=${i} status=${statusCode} kind=${kind} reason=${pushReason}`);
       } catch {
-        console.error(`[notify] 送信失敗 index=${i} status=unknown kind=unknown`);
+        console.error(`[notify] 送信失敗 index=${i} status=unknown kind=unknown reason=unknown`);
       }
     }
   });
