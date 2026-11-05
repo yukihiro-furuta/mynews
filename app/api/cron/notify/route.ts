@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { readSubscriptions, writeSubscriptions } from "@/lib/subscriptions";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 function getGreeting() {
   const hour = new Date().getHours();
   return hour < 12 ? "おはようございます" : "お疲れ様です";
@@ -18,6 +12,14 @@ export async function GET(req: NextRequest) {
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const vapidEmail = process.env.VAPID_EMAIL;
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!vapidEmail || !vapidPublicKey || !vapidPrivateKey) {
+    return NextResponse.json({ error: "vapid configuration missing" }, { status: 500 });
+  }
+  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
   const subs = await readSubscriptions();
   if (subs.length === 0) {
