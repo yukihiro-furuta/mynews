@@ -8,8 +8,13 @@ function getGreeting() {
 }
 
 export async function GET(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json({ error: "server misconfigured" }, { status: 500 });
+  }
+
   const secret = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (secret !== process.env.CRON_SECRET) {
+  if (secret !== cronSecret) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
