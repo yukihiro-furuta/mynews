@@ -3,7 +3,8 @@ import webpush from "web-push";
 import { readSubscriptions, writeSubscriptions } from "@/lib/subscriptions";
 
 function getGreeting() {
-  const hour = new Date().getHours();
+  // JST = UTC+9
+  const hour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours();
   return hour < 12 ? "おはようございます" : "お疲れ様です";
 }
 
@@ -55,7 +56,12 @@ export async function GET(req: NextRequest) {
   if (!vapidEmail || !vapidPublicKey || !vapidPrivateKey) {
     return NextResponse.json({ error: "vapid configuration missing" }, { status: 500 });
   }
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+  // RFC 8292: subject must be a mailto: or https: URI
+  const vapidSubject =
+    vapidEmail.startsWith("mailto:") || vapidEmail.startsWith("https://")
+      ? vapidEmail
+      : `mailto:${vapidEmail}`;
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
   let subs: PushSubscriptionJSON[];
   try {
@@ -109,7 +115,8 @@ export async function GET(req: NextRequest) {
     const r = results[i];
     if (r.status === "rejected") {
       const err = r.reason as { statusCode?: number };
-      return err.statusCode !== 410 && err.statusCode !== 404;
+      // RFC 8030: 410 (Gone) のみが購読無効の確定シグナル。404は過渡的な可能性がある
+      return err.statusCode !== 410;
     }
     return true;
   });
@@ -130,5 +137,5 @@ export async function GET(req: NextRequest) {
 
   console.log(`[notify] 完了 sent=${sent} failed=${failed} removed=${removed}`);
 
-  return NextResponse.json({ sent, total: subs.length });
+  return NextResponse.json({ sent, failed, removed, total: subs.length });
 }

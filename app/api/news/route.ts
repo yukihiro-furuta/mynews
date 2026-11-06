@@ -41,7 +41,8 @@ const FEEDS: {
     categoryLabel: '💹 経済',
   },
   {
-    url: 'https://diamond.jp/list/feed/rss',
+    // diamond.jp の公式RSSはHTMLを返すためGoogle News経由で取得
+    url: 'https://news.google.com/rss/search?q=site%3Adiamond.jp&hl=ja&gl=JP&ceid=JP%3Aja',
     source: 'ダイヤモンド・オンライン',
     category: 'eco',
     categoryLabel: '💹 経済',
