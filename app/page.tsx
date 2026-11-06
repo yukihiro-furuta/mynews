@@ -53,9 +53,13 @@ export default function Home() {
   // ニュース取得
   useEffect(() => {
     fetch('/api/news')
-      .then((r) => r.json())
-      .then((data: Article[]) => {
-        setArticles(data);
+      .then((r) => {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })
+      .then((data: unknown) => {
+        if (!Array.isArray(data)) throw new Error('invalid response');
+        setArticles(data as Article[]);
         setLoading(false);
       })
       .catch(() => {

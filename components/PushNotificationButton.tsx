@@ -19,7 +19,19 @@ export default function PushNotificationButton() {
       setStatus("unsupported");
       return;
     }
-    setStatus(Notification.permission as Status);
+    if (Notification.permission === "denied") {
+      setStatus("denied");
+      return;
+    }
+    // Notification.permissionだけでなく実際の購読状態を確認する
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => {
+        setStatus(sub ? "granted" : (Notification.permission as Status));
+      })
+      .catch(() => {
+        setStatus(Notification.permission as Status);
+      });
   }, []);
 
   async function subscribe() {
@@ -32,14 +44,22 @@ export default function PushNotificationButton() {
           process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
         ),
       });
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
+      if (!res.ok) {
+        // APIエラー時はブラウザ側の購読も取り消す
+        await sub.unsubscribe();
+        // unsubscribe後は購読なし。permissionが"granted"でも"subscribed"ではない
+        setStatus("default");
+        return;
+      }
       setStatus("granted");
     } catch {
-      setStatus(Notification.permission as Status);
+      // permission="granted"はブラウザ許可を示すだけで購読の存在を保証しない
+      setStatus(Notification.permission === "denied" ? "denied" : "default");
     }
   }
 
@@ -49,11 +69,15 @@ export default function PushNotificationButton() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/push/subscribe", {
+        const res = await fetch("/api/push/subscribe", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
+        if (!res.ok) {
+          setStatus("granted");
+          return;
+        }
         await sub.unsubscribe();
       }
       setStatus("default");
