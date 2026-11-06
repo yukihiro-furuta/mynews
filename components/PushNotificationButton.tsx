@@ -90,7 +90,7 @@ export default function PushNotificationButton() {
 
   if (status === "loading") {
     return (
-      <button disabled className="text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-400">
+      <button disabled className="text-xs px-3 py-1.5 rounded-full bg-gray-800 text-gray-600">
         ...
       </button>
     );
@@ -100,7 +100,7 @@ export default function PushNotificationButton() {
     return (
       <button
         onClick={unsubscribe}
-        className="text-xs px-3 py-1.5 rounded-full bg-green-100 text-green-700 border border-green-300 hover:bg-green-200 transition-colors"
+        className="text-xs px-3 py-1.5 rounded-full bg-green-900/60 text-green-300 border border-green-700 hover:bg-green-900 transition-colors"
       >
         🔔 通知ON
       </button>
@@ -109,7 +109,7 @@ export default function PushNotificationButton() {
 
   if (status === "denied") {
     return (
-      <span className="text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-400 border border-red-200">
+      <span className="text-xs px-3 py-1.5 rounded-full bg-red-900/60 text-red-400 border border-red-700">
         🔕 通知がブロックされています
       </span>
     );
@@ -118,7 +118,7 @@ export default function PushNotificationButton() {
   return (
     <button
       onClick={subscribe}
-      className="text-xs px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200 transition-colors"
+      className="text-xs px-3 py-1.5 rounded-full bg-blue-900/60 text-blue-300 border border-blue-700 hover:bg-blue-900 transition-colors"
     >
       🔔 通知を受け取る
     </button>

@@ -1,6 +1,7 @@
 import Parser from 'rss-parser';
 import { NextResponse } from 'next/server';
 import { filterItmediaItem } from '@/lib/itmedia-filter';
+import { buildArticleId } from '@/lib/stableId';
 
 export type Article = {
   id: string;
@@ -181,7 +182,7 @@ export async function GET() {
         }
 
         const items = feedItems.slice(0, 10).map((item, i) => ({
-          id: `${feed.category}-${feed.source}-${i}`,
+          id: buildArticleId(feed.category, item.guid, item.link, feed.source, i),
           title: item.title ?? '（タイトルなし）',
           link: item.link ?? '#',
           pubDate: item.pubDate ?? item.isoDate ?? '',

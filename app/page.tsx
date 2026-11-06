@@ -1,56 +1,54 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Article } from './api/news/route';
+import BottomNav from '@/components/BottomNav';
+import ArticleCard from '@/components/ArticleCard';
+import ArticleCardCompact from '@/components/ArticleCardCompact';
 import PushNotificationButton from '@/components/PushNotificationButton';
+import { FILTERS } from '@/lib/categoryStyles';
+import { loadSaved, toggleSaved } from '@/lib/savedArticles';
 
-const CAT_STYLE: Record<
-  Article['category'],
-  { bg: string; text: string; border: string; left: string }
-> = {
-  eco:      { bg: 'bg-yellow-950/60',  text: 'text-yellow-400',  border: 'border-yellow-700/40',  left: 'border-l-yellow-500' },
-  startup:  { bg: 'bg-purple-950/60',  text: 'text-purple-400',  border: 'border-purple-700/40',  left: 'border-l-purple-500' },
-  shizuoka: { bg: 'bg-teal-950/60',    text: 'text-teal-400',    border: 'border-teal-700/40',    left: 'border-l-teal-500' },
-  nagano:   { bg: 'bg-teal-950/60',    text: 'text-teal-400',    border: 'border-teal-700/40',    left: 'border-l-teal-400' },
-  agri:     { bg: 'bg-green-950/60',   text: 'text-green-400',   border: 'border-green-700/40',   left: 'border-l-green-500' },
-};
-
-const FILTERS = [
-  { key: 'all',      label: 'すべて' },
-  { key: 'eco',      label: '💹 経済' },
-  { key: 'startup',  label: '🚀 スタートアップ' },
-  { key: 'shizuoka', label: '📍 静岡' },
-  { key: 'nagano',   label: '📍 長野' },
-  { key: 'agri',     label: '🌾 農業' },
-];
-
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const h = Math.floor(diff / 3_600_000);
-  if (h < 1) return '1時間以内';
-  if (h < 24) return `${h}時間前`;
-  return `${Math.floor(h / 24)}日前`;
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 18) return 'Good Afternoon';
+  if (h >= 18 && h < 22) return 'Good Evening';
+  return 'Good Night';
 }
 
-function loadSaved(): Article[] {
-  try {
-    return JSON.parse(localStorage.getItem('saved_articles') ?? '[]');
-  } catch {
-    return [];
-  }
+function useGreeting(): string {
+  const [greeting, setGreeting] = useState('');
+  useEffect(() => { setGreeting(getGreeting()); }, []);
+  return greeting;
+}
+
+function SectionHeader({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="px-4 mb-3 flex items-center justify-between">
+      <h2 className="flex items-center gap-2 text-base font-bold text-white">
+        <span className="w-1 h-4 bg-blue-500 rounded-full inline-block" />
+        {title}
+      </h2>
+      {count !== undefined && (
+        <span className="text-xs text-gray-500">{count}件</span>
+      )}
+    </div>
+  );
 }
 
 export default function Home() {
-  const [articles, setArticles]   = useState<Article[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(false);
-  const [filter, setFilter]       = useState<string>('all');
-  const [savedIds, setSavedIds]   = useState<Set<string>>(new Set());
-  const touchStartX = useRef<number | null>(null);
+  const router = useRouter();
+  const greeting = useGreeting();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // ニュース取得
   useEffect(() => {
     fetch('/api/news')
       .then((r) => {
@@ -68,190 +66,160 @@ export default function Home() {
       });
   }, []);
 
-  // 保存済みIDを読み込む
   useEffect(() => {
-    const ids = new Set(loadSaved().map((a) => a.id));
-    setSavedIds(ids);
+    setSavedIds(new Set(loadSaved().map((a) => a.id)));
   }, []);
 
-  function toggleSave(article: Article) {
-    const current = loadSaved();
-    let next: Article[];
-    if (savedIds.has(article.id)) {
-      next = current.filter((a) => a.id !== article.id);
-    } else {
-      next = [article, ...current];
-    }
-    localStorage.setItem('saved_articles', JSON.stringify(next));
+  function handleToggleSave(article: Article) {
+    const next = toggleSaved(article);
     setSavedIds(new Set(next.map((a) => a.id)));
   }
 
-  function switchTab(direction: 'left' | 'right') {
-    const currentIndex = FILTERS.findIndex((f) => f.key === filter);
-    const nextIndex =
-      direction === 'left'
-        ? Math.min(currentIndex + 1, FILTERS.length - 1)
-        : Math.max(currentIndex - 1, 0);
-    setFilter(FILTERS[nextIndex].key);
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
   }
 
-  function handleTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) switchTab(diff > 0 ? 'left' : 'right');
-    touchStartX.current = null;
-  }
-
-  const filtered =
+  const hottestArticles = articles.slice(0, 5);
+  const forYouArticles =
     filter === 'all' ? articles : articles.filter((a) => a.category === filter);
 
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 pb-20">
+    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
 
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-blue-400">📰 MyNews</h1>
-        <div className="flex items-center gap-2">
-          <PushNotificationButton />
-          <span className="text-xs text-gray-500">
-            {loading ? '取得中...' : `${filtered.length}件`}
-          </span>
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between">
+          <div>
+            <p className="text-xs text-gray-500 font-medium tracking-wide">{greeting}</p>
+            <h1 className="text-lg font-bold text-white leading-tight">
+              Your daily dose of <span className="text-blue-400">news.</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Link
+              href="/saved"
+              className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              aria-label="保存済み記事"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={savedIds.size > 0 ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={savedIds.size > 0 ? 'text-blue-400' : ''}
+              >
+                <path d="M5 3h14a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" />
+              </svg>
+              {savedIds.size > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                  {savedIds.size > 9 ? '9+' : savedIds.size}
+                </span>
+              )}
+            </Link>
+            <PushNotificationButton />
+          </div>
         </div>
       </header>
 
-      {/* フィルタータブ */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-800 bg-gray-900 scrollbar-hide">
-        {FILTERS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setFilter(tab.key)}
-            className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
-              filter === tab.key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="max-w-2xl mx-auto">
 
-      {/* 記事一覧 */}
-      <div
-        className="max-w-2xl mx-auto px-4 py-4 space-y-3"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-
-        {loading && (
-          <p className="text-center text-gray-500 py-16">ニュースを読み込み中...</p>
-        )}
-        {error && (
-          <p className="text-center text-red-400 py-16">取得に失敗しました。</p>
-        )}
-        {!loading && !error && filtered.length === 0 && (
-          <p className="text-center text-gray-500 py-16">記事がありません</p>
-        )}
-
-        {filtered.map((article) => {
-          const s = CAT_STYLE[article.category];
-          const isSaved = savedIds.has(article.id);
-          return (
-            <div
-              key={article.id}
-              className={`bg-gray-900 border border-l-4 rounded-xl overflow-hidden ${s.border} ${s.left}`}
-            >
-              {article.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={article.image}
-                  alt=""
-                  className="w-full h-44 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              )}
-              <div className="p-3">
-                <div className="flex items-start gap-2">
-                  {/* 記事本文（リンク） */}
-                  <a
-                    href={article.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 min-w-0 hover:brightness-110 transition-all"
-                  >
-                    <span
-                      className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full border mb-2 ${s.bg} ${s.text} ${s.border}`}
-                    >
-                      {article.categoryLabel}
-                    </span>
-                    <p className="text-sm font-semibold leading-snug mb-1.5">
-                      {article.title}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {timeAgo(article.pubDate)} · {article.source}
-                    </p>
-                  </a>
-                  {/* 保存ボタン */}
-                  <button
-                    onClick={() => toggleSave(article)}
-                    className={`text-xl flex-shrink-0 mt-0.5 transition-transform active:scale-75 ${
-                      isSaved ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'
-                    }`}
-                    aria-label={isSaved ? '保存を解除' : '保存する'}
-                  >
-                    {isSaved ? '⭐' : '☆'}
-                  </button>
-                </div>
-              </div>
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="px-4 pt-4 pb-2">
+          <div className="relative">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M16.5 16.5L21 21" />
+              </svg>
             </div>
-          );
-        })}
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for news..."
+              className="w-full bg-gray-900 border border-gray-800 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-600 transition-colors"
+            />
+          </div>
+        </form>
+
+        {/* Loading */}
+        {loading && (
+          <p className="text-center text-gray-500 text-sm py-16">ニュースを読み込み中...</p>
+        )}
+
+        {/* Error */}
+        {error && (
+          <p className="text-center text-red-400 text-sm py-16">取得に失敗しました。</p>
+        )}
+
+        {!loading && !error && (
+          <>
+            {/* Hottest News */}
+            <section className="pt-5">
+              <SectionHeader title="Hottest News" count={hottestArticles.length} />
+              <div className="flex gap-3 px-4 overflow-x-auto scrollbar-hide pb-3">
+                {hottestArticles.map((article) => (
+                  <div key={article.id} className="w-72 flex-shrink-0">
+                    <ArticleCard
+                      article={article}
+                      isSaved={savedIds.has(article.id)}
+                      onToggleSave={handleToggleSave}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Topics */}
+            <section className="pt-4">
+              <SectionHeader title="Topics" />
+              <div className="flex gap-2 px-4 overflow-x-auto scrollbar-hide pb-3">
+                {FILTERS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setFilter(tab.key)}
+                    className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors font-medium flex-shrink-0 ${
+                      filter === tab.key
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white hover:border-gray-700'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* For You */}
+            <section className="pt-4">
+              <SectionHeader title="For You" count={forYouArticles.length} />
+              {forYouArticles.length === 0 ? (
+                <p className="text-center text-gray-500 text-sm py-8 px-4">記事がありません</p>
+              ) : (
+                <div className="px-4 space-y-3 pb-4">
+                  {forYouArticles.map((article) => (
+                    <ArticleCardCompact
+                      key={article.id}
+                      article={article}
+                      isSaved={savedIds.has(article.id)}
+                      onToggleSave={handleToggleSave}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
       </div>
 
-      {/* ボトムナビ */}
       <BottomNav current="home" savedCount={savedIds.size} />
     </main>
-  );
-}
-
-function BottomNav({
-  current,
-  savedCount,
-}: {
-  current: 'home' | 'saved';
-  savedCount?: number;
-}) {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 flex">
-      <Link
-        href="/"
-        className={`flex-1 py-3 flex flex-col items-center text-xs transition-colors ${
-          current === 'home' ? 'text-blue-400' : 'text-gray-500 hover:text-gray-300'
-        }`}
-      >
-        <span className="text-lg">🏠</span>
-        ホーム
-      </Link>
-      <Link
-        href="/saved"
-        className={`flex-1 py-3 flex flex-col items-center text-xs transition-colors relative ${
-          current === 'saved' ? 'text-yellow-400' : 'text-gray-500 hover:text-gray-300'
-        }`}
-      >
-        <span className="text-lg">⭐</span>
-        保存済み
-        {savedCount !== undefined && savedCount > 0 && (
-          <span className="absolute top-2 right-[calc(50%-18px)] bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-            {savedCount > 9 ? '9+' : savedCount}
-          </span>
-        )}
-      </Link>
-    </nav>
   );
 }
