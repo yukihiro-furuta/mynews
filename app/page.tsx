@@ -28,12 +28,12 @@ function useGreeting(): string {
 function SectionHeader({ title, count }: { title: string; count?: number }) {
   return (
     <div className="px-4 mb-3 flex items-center justify-between">
-      <h2 className="flex items-center gap-2 text-base font-bold text-white">
-        <span className="w-1 h-4 bg-blue-500 rounded-full inline-block" />
+      <h2 className="flex items-center gap-2 text-base font-bold text-text-primary">
+        <span className="w-1 h-4 bg-accent-blue rounded-full inline-block" />
         {title}
       </h2>
       {count !== undefined && (
-        <span className="text-xs text-gray-500">{count}件</span>
+        <span className="text-xs text-text-muted">{count}件</span>
       )}
     </div>
   );
@@ -86,21 +86,21 @@ export default function Home() {
     filter === 'all' ? articles : articles.filter((a) => a.category === filter);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-start justify-between">
           <div>
-            <p className="text-xs text-gray-500 font-medium tracking-wide">{greeting}</p>
-            <h1 className="text-lg font-bold text-white leading-tight">
-              Your daily dose of <span className="text-blue-400">news.</span>
+            <p className="text-xs text-text-muted font-medium tracking-wide">{greeting}</p>
+            <h1 className="text-lg font-bold text-text-primary leading-tight">
+              Your daily dose of <span className="text-accent-blue">news.</span>
             </h1>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Link
               href="/saved"
-              className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              className="relative p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
               aria-label="保存済み記事"
             >
               <svg
@@ -112,12 +112,12 @@ export default function Home() {
                 strokeWidth="1.75"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={savedIds.size > 0 ? 'text-blue-400' : ''}
+                className={savedIds.size > 0 ? 'text-accent-blue' : ''}
               >
                 <path d="M5 3h14a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" />
               </svg>
               {savedIds.size > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                <span className="absolute -top-0.5 -right-0.5 bg-accent-blue text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
                   {savedIds.size > 9 ? '9+' : savedIds.size}
                 </span>
               )}
@@ -132,7 +132,7 @@ export default function Home() {
         {/* Search bar */}
         <form onSubmit={handleSearch} className="px-4 pt-4 pb-2">
           <div className="relative">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M16.5 16.5L21 21" />
@@ -143,14 +143,14 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for news..."
-              className="w-full bg-gray-900 border border-gray-800 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-600 transition-colors"
+              className="w-full bg-surface-card border border-border rounded-2xl pl-10 pr-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue transition-colors"
             />
           </div>
         </form>
 
         {/* Loading */}
         {loading && (
-          <p className="text-center text-gray-500 text-sm py-16">ニュースを読み込み中...</p>
+          <p className="text-center text-text-muted text-sm py-16">ニュースを読み込み中...</p>
         )}
 
         {/* Error */}
@@ -186,8 +186,8 @@ export default function Home() {
                     onClick={() => setFilter(tab.key)}
                     className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors font-medium flex-shrink-0 ${
                       filter === tab.key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white hover:border-gray-700'
+                        ? 'bg-accent-blue text-text-primary'
+                        : 'bg-surface-card text-text-muted border border-border hover:text-text-primary hover:border-text-muted'
                     }`}
                   >
                     {tab.label}
@@ -200,7 +200,7 @@ export default function Home() {
             <section className="pt-4">
               <SectionHeader title="For You" count={forYouArticles.length} />
               {forYouArticles.length === 0 ? (
-                <p className="text-center text-gray-500 text-sm py-8 px-4">記事がありません</p>
+                <p className="text-center text-text-muted text-sm py-8 px-4">記事がありません</p>
               ) : (
                 <div className="px-4 space-y-3 pb-4">
                   {forYouArticles.map((article) => (

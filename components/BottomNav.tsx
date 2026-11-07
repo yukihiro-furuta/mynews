@@ -70,7 +70,7 @@ const TABS: TabDef[] = [
 export default function BottomNav({ current, savedCount }: Props) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-md border-t border-gray-800"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-surface-base/95 backdrop-blur-md border-t border-border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="max-w-2xl mx-auto flex">
@@ -81,13 +81,13 @@ export default function BottomNav({ current, savedCount }: Props) {
               key={key}
               href={href}
               className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors relative ${
-                isActive ? 'text-blue-400' : 'text-gray-500 hover:text-gray-300'
+                isActive ? 'text-accent-blue' : 'text-text-muted hover:text-text-secondary'
               }`}
             >
               {renderIcon(isActive)}
               <span>{label}</span>
               {key === 'saved' && savedCount !== undefined && savedCount > 0 && (
-                <span className="absolute top-1.5 left-[calc(50%+8px)] bg-blue-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                <span className="absolute top-1.5 left-[calc(50%+8px)] bg-accent-blue text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                   {savedCount > 9 ? '9+' : savedCount}
                 </span>
               )}

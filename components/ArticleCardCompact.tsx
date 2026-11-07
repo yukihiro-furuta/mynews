@@ -13,7 +13,7 @@ interface Props {
 
 export default function ArticleCardCompact({ article, isSaved = false, onToggleSave }: Props) {
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="bg-surface-card rounded-xl border border-border hover:border-text-muted transition-colors">
       <div className="flex items-start gap-3 p-3">
 
         {/* Text content */}
@@ -23,18 +23,18 @@ export default function ArticleCardCompact({ article, isSaved = false, onToggleS
           </div>
           <Link
             href={`/article/${article.id}`}
-            className="block text-sm font-semibold text-white leading-snug mb-1.5 hover:text-blue-300 transition-colors line-clamp-2"
+            className="block text-sm font-semibold text-text-primary leading-snug mb-1.5 hover:text-accent-blue transition-colors line-clamp-2"
           >
             {article.title}
           </Link>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-text-secondary">
             {article.source} · {timeAgo(article.pubDate)}
           </p>
         </div>
 
         {/* Thumbnail + save button */}
         <div className="flex-shrink-0 flex flex-col items-end gap-2">
-          <div className="w-20 h-16 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+          <div className="w-20 h-16 rounded-lg overflow-hidden bg-surface-raised flex items-center justify-center">
             {article.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -46,7 +46,7 @@ export default function ArticleCardCompact({ article, isSaved = false, onToggleS
                 }}
               />
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-gray-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-text-muted">
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <path d="M7 8h10M7 12h10M7 16h6" />
               </svg>
@@ -57,7 +57,7 @@ export default function ArticleCardCompact({ article, isSaved = false, onToggleS
             <button
               onClick={() => onToggleSave(article)}
               className={`p-1 rounded-lg transition-colors active:scale-90 ${
-                isSaved ? 'text-blue-400 hover:text-blue-300' : 'text-gray-600 hover:text-gray-400'
+                isSaved ? 'text-accent-blue hover:text-blue-300' : 'text-text-muted hover:text-text-secondary'
               }`}
               aria-label={isSaved ? '保存を解除' : '保存する'}
             >

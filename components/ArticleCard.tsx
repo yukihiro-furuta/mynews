@@ -13,8 +13,8 @@ interface Props {
 
 function NewsPlaceholder() {
   return (
-    <div className="w-full h-44 bg-gray-800 flex items-center justify-center">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-gray-700">
+    <div className="w-full h-44 bg-surface-raised flex items-center justify-center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-text-muted">
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <path d="M7 8h10M7 12h10M7 16h6" />
       </svg>
@@ -32,7 +32,7 @@ function BookmarkBtn({ filled }: { filled: boolean }) {
 
 export default function ArticleCard({ article, isSaved = false, onToggleSave }: Props) {
   return (
-    <div className="bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="bg-surface-card rounded-2xl overflow-hidden border border-border hover:border-text-muted transition-colors">
 
       {/* Hero image */}
       <Link href={`/article/${article.id}`} className="block relative">
@@ -47,12 +47,12 @@ export default function ArticleCard({ article, isSaved = false, onToggleSave }: 
                 const img = e.target as HTMLImageElement;
                 img.parentElement!.replaceWith(
                   Object.assign(document.createElement('div'), {
-                    className: 'w-full h-44 bg-gray-800',
+                    className: 'w-full h-44 bg-surface-raised',
                   })
                 );
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-surface-card/60 via-transparent to-transparent" />
           </div>
         ) : (
           <NewsPlaceholder />
@@ -68,11 +68,11 @@ export default function ArticleCard({ article, isSaved = false, onToggleSave }: 
             </div>
             <Link
               href={`/article/${article.id}`}
-              className="block text-sm font-semibold text-white leading-snug mb-2 hover:text-blue-300 transition-colors line-clamp-3"
+              className="block text-sm font-semibold text-text-primary leading-snug mb-2 hover:text-accent-blue transition-colors line-clamp-3"
             >
               {article.title}
             </Link>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-text-secondary">
               {article.source} · {timeAgo(article.pubDate)}
             </p>
           </div>
@@ -81,7 +81,7 @@ export default function ArticleCard({ article, isSaved = false, onToggleSave }: 
             <button
               onClick={() => onToggleSave(article)}
               className={`flex-shrink-0 mt-0.5 p-1.5 rounded-lg transition-colors active:scale-90 ${
-                isSaved ? 'text-blue-400 hover:text-blue-300' : 'text-gray-600 hover:text-gray-400'
+                isSaved ? 'text-accent-blue hover:text-blue-300' : 'text-text-muted hover:text-text-secondary'
               }`}
               aria-label={isSaved ? '保存を解除' : '保存する'}
             >

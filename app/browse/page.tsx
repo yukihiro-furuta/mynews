@@ -53,48 +53,48 @@ export default function BrowsePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white leading-tight">Browse</h1>
+          <h1 className="text-lg font-bold text-text-primary leading-tight">Browse</h1>
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-6">
 
         {/* Coming soon banner */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col items-center text-center gap-4">
+        <div className="bg-surface-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-700/40 flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-accent-blue">
               <rect x="3" y="4" width="18" height="16" rx="2" />
               <path d="M7 8h10M7 12h10M7 16h6" />
             </svg>
           </div>
           <div>
-            <p className="text-base font-semibold text-white mb-1">準備中</p>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-base font-semibold text-text-primary mb-1">準備中</p>
+            <p className="text-sm text-text-secondary leading-relaxed">
               ニュースカテゴリーや地域別ニュースを探せる機能を準備しています
             </p>
           </div>
-          <span className="text-xs text-blue-400 bg-blue-950/60 border border-blue-700/40 px-3 py-1 rounded-full">
+          <span className="text-xs text-accent-blue bg-blue-950/70 border border-blue-700/60 px-3 py-1 rounded-full">
             近日公開
           </span>
         </div>
 
         {/* Planned features */}
         <div>
-          <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mb-2 px-1">追加予定の機能</p>
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden divide-y divide-gray-800">
+          <p className="text-xs text-text-muted font-medium tracking-wide uppercase mb-2 px-1">追加予定の機能</p>
+          <div className="bg-surface-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
             {COMING_SOON.map((item, i) => (
               <div key={i} className="flex items-start gap-3 py-4 px-4">
-                <span className="text-gray-600 mt-0.5 flex-shrink-0">{item.icon}</span>
+                <span className="text-text-muted mt-0.5 flex-shrink-0">{item.icon}</span>
                 <div>
-                  <p className="text-sm text-gray-200 font-medium mb-0.5">{item.label}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
+                  <p className="text-sm text-text-primary font-medium mb-0.5">{item.label}</p>
+                  <p className="text-xs text-text-secondary leading-relaxed">{item.description}</p>
                 </div>
-                <span className="ml-auto flex-shrink-0 text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full self-start">近日</span>
+                <span className="ml-auto flex-shrink-0 text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-full self-start">近日</span>
               </div>
             ))}
           </div>

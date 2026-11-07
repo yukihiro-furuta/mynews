@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@theme {
+  --color-surface-base:   #050505;
+  --color-surface-card:   #191919;
+  --color-surface-raised: #222222;
+  --color-border:         #303030;
+  --color-border-subtle:  #1f1f1f;
+  --color-text-primary:   #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted:     #52525b;
+  --color-accent-blue:    #3b82f6;
+  --color-accent-purple:  #a855f7;
+  --color-accent-green:   #22c55e;
+}
+
 /* スクロールバーを非表示（フィルタータブ） */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

@@ -13,8 +13,8 @@ function SettingRow({ icon, label, children }: {
   return (
     <div className="flex items-center justify-between gap-3 py-3.5 px-4">
       <div className="flex items-center gap-3">
-        <span className="text-gray-500">{icon}</span>
-        <span className="text-sm text-gray-200">{label}</span>
+        <span className="text-text-muted">{icon}</span>
+        <span className="text-sm text-text-primary">{label}</span>
       </div>
       <div className="flex-shrink-0">{children}</div>
     </div>
@@ -23,7 +23,7 @@ function SettingRow({ icon, label, children }: {
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden divide-y divide-gray-800">
+    <div className="bg-surface-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
       {children}
     </div>
   );
@@ -32,8 +32,8 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 py-3.5 px-4">
-      <span className="text-sm text-gray-400">{label}</span>
-      <span className="text-sm text-gray-500">{value}</span>
+      <span className="text-sm text-text-secondary">{label}</span>
+      <span className="text-sm text-text-muted">{value}</span>
     </div>
   );
 }
@@ -46,12 +46,12 @@ export default function ProfilePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white leading-tight">Profile</h1>
+          <h1 className="text-lg font-bold text-text-primary leading-tight">Profile</h1>
         </div>
       </header>
 
@@ -66,14 +66,14 @@ export default function ProfilePage() {
             </svg>
           </div>
           <div className="text-center">
-            <p className="text-base font-bold text-white">MyNews</p>
-            <p className="text-xs text-gray-500 mt-0.5">Your personal news magazine.</p>
+            <p className="text-base font-bold text-text-primary">MyNews</p>
+            <p className="text-xs text-text-muted mt-0.5">Your personal news magazine.</p>
           </div>
         </div>
 
         {/* Notification settings */}
         <div>
-          <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mb-2 px-1">通知設定</p>
+          <p className="text-xs text-text-muted font-medium tracking-wide uppercase mb-2 px-1">通知設定</p>
           <SectionCard>
             <SettingRow
               icon={
@@ -87,7 +87,7 @@ export default function ProfilePage() {
               <PushNotificationButton />
             </SettingRow>
             <div className="px-4 pb-3">
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-xs text-text-muted leading-relaxed">
                 通知を有効にすると、最新ニュースをプッシュ通知でお届けします。ブラウザの通知許可が必要です。
               </p>
             </div>
@@ -96,7 +96,7 @@ export default function ProfilePage() {
 
         {/* Stats */}
         <div>
-          <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mb-2 px-1">利用状況</p>
+          <p className="text-xs text-text-muted font-medium tracking-wide uppercase mb-2 px-1">利用状況</p>
           <SectionCard>
             <InfoRow label="保存済み記事" value={`${savedCount}件`} />
           </SectionCard>
@@ -104,18 +104,18 @@ export default function ProfilePage() {
 
         {/* About */}
         <div>
-          <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mb-2 px-1">アプリ情報</p>
+          <p className="text-xs text-text-muted font-medium tracking-wide uppercase mb-2 px-1">アプリ情報</p>
           <SectionCard>
             <InfoRow label="バージョン" value="1.0.0" />
             <div className="py-3.5 px-4">
-              <p className="text-xs text-gray-500 font-medium mb-1">ニュース取得元</p>
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-xs text-text-muted font-medium mb-1">ニュース取得元</p>
+              <p className="text-xs text-text-muted leading-relaxed">
                 ITmedia、SankeiBiz等のRSSフィードから経済・スタートアップ・静岡・長野・農業の記事を自動収集しています。各記事の著作権は原著作者に帰属します。
               </p>
             </div>
             <div className="py-3.5 px-4">
-              <p className="text-xs text-gray-500 font-medium mb-1">プライバシー</p>
-              <p className="text-xs text-gray-600 leading-relaxed">
+              <p className="text-xs text-text-muted font-medium mb-1">プライバシー</p>
+              <p className="text-xs text-text-muted leading-relaxed">
                 保存済み記事はお使いのデバイスのみに保存されます。プッシュ通知の購読情報はサーバーに保存されますが、個人を特定する情報は収集しません。
               </p>
             </div>
@@ -124,7 +124,7 @@ export default function ProfilePage() {
 
         {/* Future features placeholder */}
         <div>
-          <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mb-2 px-1">今後対応予定</p>
+          <p className="text-xs text-text-muted font-medium tracking-wide uppercase mb-2 px-1">今後対応予定</p>
           <SectionCard>
             <SettingRow
               icon={
@@ -135,7 +135,7 @@ export default function ProfilePage() {
               }
               label="カテゴリのカスタマイズ"
             >
-              <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">近日公開</span>
+              <span className="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-full">近日公開</span>
             </SettingRow>
             <SettingRow
               icon={
@@ -146,7 +146,7 @@ export default function ProfilePage() {
               }
               label="アカウント連携"
             >
-              <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">近日公開</span>
+              <span className="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-full">近日公開</span>
             </SettingRow>
           </SectionCard>
         </div>
