@@ -6,7 +6,8 @@ import {
   checkRateLimit,
 } from '@/lib/aiSecurity';
 
-const MAX_MSG_CHARS = 500;
+const MAX_USER_MSG_CHARS = 500;
+const MAX_ASSISTANT_MSG_CHARS = 5000;
 const MAX_MESSAGES = 10;
 const MAX_OUTPUT_TOKENS = 800;
 const MAX_BODY_BYTES = 20_000;
@@ -93,9 +94,10 @@ export async function POST(req: NextRequest) {
     if (trimmed.length === 0) {
       return NextResponse.json({ error: 'メッセージの内容が空です' }, { status: 400 });
     }
-    if (trimmed.length > MAX_MSG_CHARS) {
+    const maxChars = role === 'user' ? MAX_USER_MSG_CHARS : MAX_ASSISTANT_MSG_CHARS;
+    if (trimmed.length > maxChars) {
       return NextResponse.json(
-        { error: `メッセージは${MAX_MSG_CHARS}文字以内にしてください` },
+        { error: `メッセージは${maxChars}文字以内にしてください` },
         { status: 400 },
       );
     }
