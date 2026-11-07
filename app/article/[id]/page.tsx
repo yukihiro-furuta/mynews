@@ -1,12 +1,15 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Article } from '../../api/news/route';
 import BottomNav from '@/components/BottomNav';
 import CategoryBadge from '@/components/CategoryBadge';
 import { loadSaved, toggleSaved } from '@/lib/savedArticles';
 import { timeAgo } from '@/lib/timeAgo';
+
+type ChatMessage = { role: 'user' | 'assistant'; content: string };
+const CHAT_MAX_SEND_MESSAGES = 10; // APIへ送信する最大件数
 
 function pubDateFull(dateStr: string): string {
   if (!dateStr) return '';
@@ -52,6 +55,13 @@ function ArticleDetailInner() {
   const [translatedDescription, setTranslatedDescription] = useState('');
   const [translateError, setTranslateError] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
+
+  // チャット状態
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -142,6 +152,87 @@ function ArticleDetailInner() {
     const next = toggleSaved(article);
     setIsSaved(next.some((a) => a.id === article.id));
     setSavedCount(next.length);
+  }
+
+  async function handleChatSend() {
+    if (!article || chatLoading || !chatInput.trim()) return;
+    const userMessage: ChatMessage = { role: 'user', content: chatInput.trim() };
+    const nextMessages = [...chatMessages, userMessage];
+    setChatMessages(nextMessages);
+    setChatInput('');
+    setChatLoading(true);
+    setChatError('');
+
+    // 送信するのは末尾 CHAT_MAX_SEND_MESSAGES 件のみ
+    const messagesToSend = nextMessages.slice(-CHAT_MAX_SEND_MESSAGES);
+
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId: article.id,
+          title: article.title,
+          description: article.description,
+          source: article.source,
+          messages: messagesToSend,
+        }),
+      });
+      const data = await res.json() as { reply?: string; error?: string };
+      if (!res.ok) {
+        setChatError(data.error ?? 'エラーが発生しました');
+        return;
+      }
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply ?? '' }]);
+      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    } catch {
+      setChatError('ネットワークエラーが発生しました');
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  function handleChatReset() {
+    setChatMessages([]);
+    setChatInput('');
+    setChatError('');
+  }
+
+  function handleChatRetry() {
+    if (!article || chatMessages.length === 0) return;
+    // 最後のユーザーメッセージから再送
+    const lastUserIdx = [...chatMessages].reverse().findIndex((m) => m.role === 'user');
+    if (lastUserIdx === -1) return;
+    const idx = chatMessages.length - 1 - lastUserIdx;
+    const retryMessages = chatMessages.slice(0, idx + 1);
+    setChatMessages(retryMessages);
+    setChatError('');
+    setChatLoading(true);
+
+    const messagesToSend = retryMessages.slice(-CHAT_MAX_SEND_MESSAGES);
+
+    fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        articleId: article.id,
+        title: article.title,
+        description: article.description,
+        source: article.source,
+        messages: messagesToSend,
+      }),
+    })
+      .then((r) => r.json() as Promise<{ reply?: string; error?: string }>)
+      .then((data) => {
+        if (!data.reply) {
+          setChatError(data.error ?? 'エラーが発生しました');
+          return;
+        }
+        setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply ?? '' }]);
+        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      })
+      .catch(() => setChatError('ネットワークエラーが発生しました'))
+      .finally(() => setChatLoading(false));
   }
 
   return (
@@ -392,6 +483,121 @@ function ArticleDetailInner() {
                   </svg>
                   {isSaved ? '保存済み（タップして解除）' : '後で読む'}
                 </button>
+              </div>
+
+              {/* AI Chat */}
+              <div className="mt-8 rounded-2xl bg-surface-card border border-border overflow-hidden">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400 flex-shrink-0">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-text-secondary tracking-wide">この記事についてAIに質問する</span>
+                  </div>
+                  {chatMessages.length > 0 && (
+                    <button
+                      onClick={handleChatReset}
+                      className="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1 rounded-lg hover:bg-surface-raised"
+                    >
+                      会話をリセット
+                    </button>
+                  )}
+                </div>
+
+                {/* Guide / History */}
+                <div className="px-4 pt-4 pb-2">
+                  {chatMessages.length === 0 && !chatLoading && (
+                    <p className="text-xs text-text-muted leading-relaxed mb-3">
+                      記事の内容についてAIに自由に質問できます。タイトルとRSS概要をもとに回答します。記事全文は取得していないため、詳細は元記事をご確認ください。
+                    </p>
+                  )}
+
+                  {/* Message history */}
+                  {chatMessages.length > 0 && (
+                    <div className="space-y-3 mb-3 max-h-80 overflow-y-auto">
+                      {chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                              msg.role === 'user'
+                                ? 'bg-accent-blue text-white rounded-br-sm'
+                                : 'bg-surface-raised text-text-primary rounded-bl-sm'
+                            }`}
+                          >
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      {chatLoading && (
+                        <div className="flex justify-start">
+                          <div className="bg-surface-raised rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        </div>
+                      )}
+                      <div ref={chatBottomRef} />
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {chatError && (
+                    <div className="mb-3 space-y-2">
+                      <p className="text-xs text-red-400">{chatError}</p>
+                      <button
+                        onClick={handleChatRetry}
+                        disabled={chatLoading}
+                        className="text-xs text-text-muted border border-border rounded-xl px-3 py-1.5 hover:text-text-primary hover:border-text-muted transition-colors disabled:opacity-50"
+                      >
+                        再試行する
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input area */}
+                <div className="px-3 pb-3 flex gap-2 items-end">
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        void handleChatSend();
+                      }
+                    }}
+                    placeholder="質問を入力..."
+                    rows={2}
+                    maxLength={500}
+                    disabled={chatLoading}
+                    className="flex-1 resize-none bg-surface-raised border border-border rounded-xl px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-violet-600 transition-colors disabled:opacity-50"
+                  />
+                  <button
+                    onClick={() => void handleChatSend()}
+                    disabled={chatLoading || !chatInput.trim()}
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="送信"
+                  >
+                    {chatLoading ? (
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p className="px-4 pb-3 text-xs text-text-muted">
+                  ※ タイトルとRSS概要をもとに回答します。ページを離れると会話は消えます。
+                </p>
               </div>
             </div>
           </>
