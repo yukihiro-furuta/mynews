@@ -7,7 +7,10 @@ import {
   saveConversation,
   appendMessage,
   updateConversation,
+  getConversation,
+  deleteConversation,
   type SavedMessage,
+  type Conversation,
 } from '@/lib/chatHistory';
 
 async function generateAndSaveTitle(
@@ -58,6 +61,21 @@ function toSaveErrorMessage(reason: string): string {
   }
 }
 
+function formatRelativeDate(isoString: string): string {
+  const now = new Date();
+  const date = new Date(isoString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return '今日';
+  if (diffDays === 1) return '昨日';
+  if (diffDays < 7) return `${diffDays}日前`;
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  if (y === now.getFullYear()) return `${m}月${d}日`;
+  return `${y}年${m}月${d}日`;
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
@@ -67,22 +85,39 @@ export default function ChatPage() {
   const [saveError, setSaveError] = useState('');
   const [convId, setConvId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Restore latest conversation from localStorage after mount
   useEffect(() => {
-    const conversations = loadConversations();
-    if (conversations.length > 0) {
-      const latest = conversations[0];
+    const loaded = loadConversations();
+    if (loaded.length > 0) {
+      const latest = loaded[0];
       setConvId(latest.id);
       setMessages([INITIAL_MESSAGE, ...latest.messages]);
     }
+    setConversations(loaded);
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) setDrawerOpen(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Returns the AI reply string on success, null on error
   async function callApi(apiMessages: ChatMessage[]): Promise<string | null> {
@@ -169,10 +204,14 @@ export default function ChatPage() {
           const msg = toSaveErrorMessage(result.reason);
           if (msg) setSaveError(msg);
         } else if (isFirstMessage) {
-          void generateAndSaveTitle(activeConvId, trimmed, reply);
+          void generateAndSaveTitle(activeConvId, trimmed, reply).then(() => {
+            setConversations(loadConversations());
+          });
         }
       }
     }
+
+    setConversations(loadConversations());
   }
 
   function handleRetry() {
@@ -204,11 +243,40 @@ export default function ChatPage() {
   }
 
   function handleReset() {
+    if (loading || !hydrated) return;
     setMessages([INITIAL_MESSAGE]);
     setInput('');
     setError('');
     setSaveError('');
     setConvId(null); // next send will create a new conversation
+  }
+
+  function handleDeleteConversation(id: string, title: string) {
+    if (loading || !hydrated) return;
+    if (!window.confirm(`「${title}」を削除しますか？`)) return;
+    const ok = deleteConversation(id);
+    if (!ok) {
+      setSaveError('会話の削除に失敗しました。');
+      return;
+    }
+    if (id === convId) {
+      handleReset();
+    }
+    setConversations(loadConversations());
+  }
+
+  function handleSelectConversation(id: string) {
+    if (!hydrated || loading) return;
+    if (input.trim()) {
+      if (!window.confirm('入力中の内容は破棄されます。切り替えますか？')) return;
+    }
+    const conv = getConversation(id);
+    if (!conv) return;
+    setConvId(conv.id);
+    setMessages([INITIAL_MESSAGE, ...conv.messages]);
+    setInput('');
+    setError('');
+    setSaveError('');
   }
 
   const hasUserMessages = messages.some((m) => m.role === 'user');
@@ -230,6 +298,18 @@ export default function ChatPage() {
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            disabled={!hydrated}
+            className="md:hidden p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors disabled:opacity-50"
+            aria-label="会話履歴を開く"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400 flex-shrink-0">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -239,7 +319,8 @@ export default function ChatPage() {
           {hasUserMessages && (
             <button
               onClick={handleReset}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1 rounded-lg hover:bg-surface-raised flex-shrink-0"
+              disabled={!hydrated || loading}
+              className="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1 rounded-lg hover:bg-surface-raised flex-shrink-0 disabled:opacity-50"
             >
               新規チャット
             </button>
@@ -247,125 +328,285 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-3">
+      {/* Body: sidebar + chat */}
+      <div className="flex-1 flex overflow-hidden">
 
-          <p className="text-xs text-text-muted text-center">
-            会話は自動保存されます
-          </p>
-
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-full bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                  </svg>
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-accent-blue text-white rounded-br-sm'
-                    : 'bg-surface-card border border-border text-text-primary rounded-bl-sm'
-                }`}
-              >
-                {msg.content}
-              </div>
-            </div>
-          ))}
-
-          {loading && (
-            <div className="flex items-end gap-2 justify-start">
-              <div className="w-7 h-7 rounded-full bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <div className="bg-surface-card border border-border rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-950/30 border border-red-800/40 rounded-2xl px-4 py-3 space-y-2">
-              <p className="text-xs text-red-400">{error}</p>
-              <button
-                onClick={handleRetry}
-                disabled={loading}
-                className="text-xs text-text-muted border border-border rounded-xl px-3 py-1.5 hover:text-text-primary hover:border-text-muted transition-colors disabled:opacity-50"
-              >
-                再試行する
-              </button>
-            </div>
-          )}
-
-          {saveError && (
-            <div className="bg-amber-950/20 border border-amber-800/30 rounded-2xl px-4 py-2.5">
-              <p className="text-xs text-amber-400">{saveError}</p>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="flex-shrink-0 border-t border-border-subtle bg-surface-base/95 backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="max-w-2xl mx-auto px-3 pt-2.5 pb-3">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    void handleSend();
-                  }
-                }}
-                placeholder="メッセージを入力..."
-                rows={2}
-                maxLength={MAX_CHARS}
-                disabled={loading || !hydrated}
-                className="w-full resize-none bg-surface-raised border border-border rounded-xl px-3 py-2 pr-16 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-violet-600 transition-colors disabled:opacity-50"
-              />
-              {nearLimit && (
-                <span className={`absolute bottom-2.5 right-2.5 text-xs pointer-events-none ${charCount >= MAX_CHARS ? 'text-red-400' : 'text-text-muted'}`}>
-                  {charCount}/{MAX_CHARS}
-                </span>
-              )}
-            </div>
+        {/* PC Sidebar */}
+        <aside className="hidden md:flex flex-col w-64 flex-shrink-0 border-r border-border-subtle">
+          <div className="flex-shrink-0 p-3 border-b border-border-subtle">
             <button
-              onClick={() => void handleSend()}
-              disabled={loading || !input.trim() || !hydrated}
-              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label="送信"
+              onClick={handleReset}
+              disabled={!hydrated || loading}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors disabled:opacity-50"
             >
-              {loading ? (
-                <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M21 12a9 9 0 11-6.219-8.56" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              新しいチャット
             </button>
           </div>
-          <p className="text-xs text-text-muted mt-1.5 text-center">
-            Enter で送信・Shift+Enter で改行
-          </p>
+          <div className="flex-1 overflow-y-auto py-1 scrollbar-hide">
+            {conversations.length === 0 ? (
+              <p className="px-4 py-8 text-xs text-text-muted text-center">会話履歴はありません</p>
+            ) : (
+              conversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  className={`group flex items-center mx-1 rounded-xl transition-colors ${
+                    convId === conv.id
+                      ? 'bg-surface-raised'
+                      : 'hover:bg-surface-card'
+                  }`}
+                  style={{ width: 'calc(100% - 8px)' }}
+                >
+                  <button
+                    onClick={() => handleSelectConversation(conv.id)}
+                    disabled={loading || !hydrated}
+                    className={`flex-1 min-w-0 text-left px-3 py-2.5 transition-colors disabled:opacity-50 ${
+                      convId === conv.id
+                        ? 'text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    <p className="text-xs font-medium truncate leading-snug">{conv.title}</p>
+                    <p className="text-[10px] text-text-muted mt-0.5">{formatRelativeDate(conv.updatedAt)}</p>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conv.id, conv.title);
+                    }}
+                    disabled={loading || !hydrated}
+                    className={`flex-shrink-0 p-1.5 mr-1 rounded-lg transition-all ${
+                      loading || !hydrated
+                        ? 'opacity-0 pointer-events-none'
+                        : 'text-text-muted opacity-0 group-hover:opacity-100 hover:text-red-400'
+                    }`}
+                    aria-label={`${conv.title}を削除`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-3">
+
+              <p className="text-xs text-text-muted text-center">
+                会話は自動保存されます
+              </p>
+
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {msg.role === 'assistant' && (
+                    <div className="w-7 h-7 rounded-full bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                      </svg>
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-accent-blue text-white rounded-br-sm'
+                        : 'bg-surface-card border border-border text-text-primary rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+
+              {loading && (
+                <div className="flex items-end gap-2 justify-start">
+                  <div className="w-7 h-7 rounded-full bg-violet-600/20 border border-violet-600/30 flex items-center justify-center flex-shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                  </div>
+                  <div className="bg-surface-card border border-border rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-950/30 border border-red-800/40 rounded-2xl px-4 py-3 space-y-2">
+                  <p className="text-xs text-red-400">{error}</p>
+                  <button
+                    onClick={handleRetry}
+                    disabled={loading}
+                    className="text-xs text-text-muted border border-border rounded-xl px-3 py-1.5 hover:text-text-primary hover:border-text-muted transition-colors disabled:opacity-50"
+                  >
+                    再試行する
+                  </button>
+                </div>
+              )}
+
+              {saveError && (
+                <div className="bg-amber-950/20 border border-amber-800/30 rounded-2xl px-4 py-2.5">
+                  <p className="text-xs text-amber-400">{saveError}</p>
+                </div>
+              )}
+
+              <div ref={bottomRef} />
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="flex-shrink-0 border-t border-border-subtle bg-surface-base/95 backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)]">
+            <div className="max-w-2xl mx-auto px-3 pt-2.5 pb-3">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 relative">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        void handleSend();
+                      }
+                    }}
+                    placeholder="メッセージを入力..."
+                    rows={2}
+                    maxLength={MAX_CHARS}
+                    disabled={loading || !hydrated}
+                    className="w-full resize-none bg-surface-raised border border-border rounded-xl px-3 py-2 pr-16 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-violet-600 transition-colors disabled:opacity-50"
+                  />
+                  {nearLimit && (
+                    <span className={`absolute bottom-2.5 right-2.5 text-xs pointer-events-none ${charCount >= MAX_CHARS ? 'text-red-400' : 'text-text-muted'}`}>
+                      {charCount}/{MAX_CHARS}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => void handleSend()}
+                  disabled={loading || !input.trim() || !hydrated}
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="送信"
+                >
+                  {loading ? (
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M21 12a9 9 0 11-6.219-8.56" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-text-muted mt-1.5 text-center">
+                Enter で送信・Shift+Enter で改行
+              </p>
+            </div>
+          </div>
+
         </div>
+
       </div>
+
+      {/* Mobile Drawer */}
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div className="relative flex flex-col w-full max-w-72 bg-surface-base border-r border-border-subtle pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+              <span className="text-sm font-medium text-text-secondary">会話履歴</span>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
+                aria-label="閉じる"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-shrink-0 p-3 border-b border-border-subtle">
+              <button
+                onClick={() => { handleReset(); setDrawerOpen(false); }}
+                disabled={!hydrated || loading}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors disabled:opacity-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                新しいチャット
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto py-1">
+              {conversations.length === 0 ? (
+                <p className="px-4 py-8 text-xs text-text-muted text-center">会話履歴はありません</p>
+              ) : (
+                conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className={`group flex items-center mx-2 rounded-xl transition-colors ${
+                      convId === conv.id ? 'bg-surface-raised' : 'hover:bg-surface-card'
+                    }`}
+                  >
+                    <button
+                      onClick={() => { handleSelectConversation(conv.id); setDrawerOpen(false); }}
+                      disabled={loading || !hydrated}
+                      className={`flex-1 min-w-0 text-left px-3 py-3 transition-colors disabled:opacity-50 ${
+                        convId === conv.id ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <p className="text-sm font-medium truncate leading-snug">{conv.title}</p>
+                      <p className="text-xs text-text-muted mt-0.5">{formatRelativeDate(conv.updatedAt)}</p>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteConversation(conv.id, conv.title);
+                      }}
+                      disabled={loading || !hydrated}
+                      className={`flex-shrink-0 p-2 mr-1 rounded-lg transition-all ${
+                        loading || !hydrated
+                          ? 'opacity-0 pointer-events-none'
+                          : 'text-text-muted opacity-60 hover:opacity-100 hover:text-red-400'
+                      }`}
+                      aria-label={`${conv.title}を削除`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </main>
   );
