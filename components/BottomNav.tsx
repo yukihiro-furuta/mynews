@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-export type BottomNavTab = 'home' | 'search' | 'browse' | 'saved' | 'profile';
+export type BottomNavTab = 'home' | 'search' | 'browse' | 'saved' | 'chat' | 'profile';
 
 interface Props {
   current: BottomNavTab;
@@ -43,6 +43,14 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
   );
 }
 
+function ChatIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+    </svg>
+  );
+}
+
 function ProfileIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -64,6 +72,7 @@ const TABS: TabDef[] = [
   { key: 'search',  href: '/search',  label: '検索',     renderIcon: ()       => <SearchIcon /> },
   { key: 'browse',  href: '/browse',  label: 'ブラウズ', renderIcon: ()       => <BrowseIcon /> },
   { key: 'saved',   href: '/saved',   label: '保存',     renderIcon: (active) => <BookmarkIcon filled={active} /> },
+  { key: 'chat',    href: '/chat',    label: 'AI',       renderIcon: ()       => <ChatIcon /> },
   { key: 'profile', href: '/profile', label: '設定',     renderIcon: ()       => <ProfileIcon /> },
 ];
 
@@ -80,7 +89,7 @@ export default function BottomNav({ current, savedCount }: Props) {
             <Link
               key={key}
               href={href}
-              className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors relative ${
+              className={`flex-1 py-2 flex flex-col items-center gap-0.5 text-[9px] font-medium transition-colors relative ${
                 isActive ? 'text-accent-blue' : 'text-text-muted hover:text-text-secondary'
               }`}
             >

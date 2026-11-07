@@ -20,7 +20,7 @@ const MODEL = 'claude-haiku-4-5-20251001';
 // レート制限設定（summary/translate と分離されたキーを使用）
 const RL_PER_MIN_LIMIT = 10;
 const RL_PER_DAY_LIMIT = 50;
-const RL_AIGEN_DAY_LIMIT = 20; // summary + translate + chat の合算AI生成上限
+const RL_AIGEN_DAY_LIMIT = 20; // summary + translate + chat + generalchat の合算AI生成上限
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
