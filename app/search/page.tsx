@@ -62,12 +62,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_ACCENT: Record<string, string> = {
-  all:      'text-blue-400 bg-blue-950/60 border-blue-700/40',
-  eco:      'text-yellow-400 bg-yellow-950/60 border-yellow-700/40',
-  startup:  'text-purple-400 bg-purple-950/60 border-purple-700/40',
-  shizuoka: 'text-teal-400 bg-teal-950/60 border-teal-700/40',
-  nagano:   'text-teal-300 bg-teal-950/60 border-teal-700/40',
-  agri:     'text-green-400 bg-green-950/60 border-green-700/40',
+  all:      'text-blue-400 bg-blue-950/70 border-blue-700/60',
+  eco:      'text-yellow-400 bg-yellow-950/70 border-yellow-700/60',
+  startup:  'text-purple-400 bg-purple-950/70 border-purple-700/60',
+  shizuoka: 'text-teal-400 bg-teal-950/70 border-teal-700/60',
+  nagano:   'text-teal-300 bg-teal-950/70 border-teal-700/60',
+  agri:     'text-green-400 bg-green-950/70 border-green-700/60',
 };
 
 export default function SearchPage() {
@@ -80,14 +80,14 @@ export default function SearchPage() {
 
 function SearchPageSkeleton() {
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white leading-tight">Search</h1>
+          <h1 className="text-lg font-bold text-text-primary leading-tight">Search</h1>
         </div>
       </header>
       <div className="max-w-2xl mx-auto px-4 pt-4">
-        <div className="h-11 bg-gray-900 border border-gray-800 rounded-2xl" />
+        <div className="h-11 bg-surface-card border border-border rounded-2xl" />
       </div>
     </main>
   );
@@ -146,12 +146,12 @@ function SearchPageInner() {
   const isSearching = q.length > 0;
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white leading-tight">
+          <h1 className="text-lg font-bold text-text-primary leading-tight">
             Search
           </h1>
         </div>
@@ -162,7 +162,7 @@ function SearchPageInner() {
         {/* Search bar */}
         <div className="px-4 pt-4 pb-3">
           <div className="relative">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M16.5 16.5L21 21" />
@@ -175,12 +175,12 @@ function SearchPageInner() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="キーワードで検索..."
               autoFocus={!!initialQuery}
-              className="w-full bg-gray-900 border border-gray-800 rounded-2xl pl-10 pr-10 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-600 transition-colors"
+              className="w-full bg-surface-card border border-border rounded-2xl pl-10 pr-10 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue transition-colors"
             />
             {query.length > 0 && (
               <button
                 onClick={() => { setQuery(''); inputRef.current?.focus(); }}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
                 aria-label="クリア"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -194,7 +194,7 @@ function SearchPageInner() {
         {/* Category grid */}
         {!isSearching && (
           <section className="px-4 pb-4">
-            <p className="text-xs text-gray-500 font-medium mb-3 tracking-wide uppercase">カテゴリ</p>
+            <p className="text-xs text-text-muted font-medium mb-3 tracking-wide uppercase">カテゴリ</p>
             <div className="grid grid-cols-3 gap-2">
               {FILTERS.map((f) => {
                 const isActive = activeCategory === f.key;
@@ -206,7 +206,7 @@ function SearchPageInner() {
                     className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all text-xs font-medium ${
                       isActive
                         ? `${accent} ring-1 ring-inset ${accent.includes('blue') ? 'ring-blue-600' : accent.includes('yellow') ? 'ring-yellow-600' : accent.includes('purple') ? 'ring-purple-600' : accent.includes('teal') ? 'ring-teal-600' : 'ring-green-600'}`
-                        : 'bg-gray-900 text-gray-500 border-gray-800 hover:text-gray-300 hover:border-gray-700'
+                        : 'bg-surface-card text-text-muted border-border hover:text-text-secondary hover:border-text-muted'
                     }`}
                   >
                     <span className={isActive ? '' : 'opacity-50'}>
@@ -223,14 +223,14 @@ function SearchPageInner() {
         {/* Results header */}
         {(isSearching || activeCategory !== 'all') && !loading && !error && (
           <div className="px-4 pb-2 flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-text-muted">
               {filtered.length}件の結果
-              {isSearching && <span className="ml-1 text-white font-medium">&ldquo;{query.trim()}&rdquo;</span>}
+              {isSearching && <span className="ml-1 text-text-primary font-medium">&ldquo;{query.trim()}&rdquo;</span>}
             </p>
             {activeCategory !== 'all' && (
               <button
                 onClick={() => setActiveCategory('all')}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-xs text-accent-blue hover:text-blue-300 transition-colors"
               >
                 絞り込みを解除
               </button>
@@ -240,7 +240,7 @@ function SearchPageInner() {
 
         {/* Loading */}
         {loading && (
-          <p className="text-center text-gray-500 text-sm py-16">読み込み中...</p>
+          <p className="text-center text-text-muted text-sm py-16">読み込み中...</p>
         )}
 
         {/* Error */}
@@ -252,14 +252,14 @@ function SearchPageInner() {
         {!loading && !error && (isSearching || activeCategory !== 'all') && (
           filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-gray-600">
+              <div className="w-14 h-14 rounded-2xl bg-surface-card border border-border flex items-center justify-center mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-text-muted">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M16.5 16.5L21 21" />
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-white mb-1">記事が見つかりません</p>
-              <p className="text-xs text-gray-500">別のキーワードやカテゴリをお試しください</p>
+              <p className="text-sm font-semibold text-text-primary mb-1">記事が見つかりません</p>
+              <p className="text-xs text-text-muted">別のキーワードやカテゴリをお試しください</p>
             </div>
           ) : (
             <div className="px-4 space-y-3 pb-4">
@@ -278,7 +278,7 @@ function SearchPageInner() {
         {/* Initial state: no search, all categories */}
         {!loading && !error && !isSearching && activeCategory === 'all' && (
           <div className="px-4 pt-2 pb-4">
-            <p className="text-xs text-gray-500 font-medium mb-3 tracking-wide uppercase">最新記事</p>
+            <p className="text-xs text-text-muted font-medium mb-3 tracking-wide uppercase">最新記事</p>
             <div className="space-y-3">
               {allArticles.slice(0, 10).map((article) => (
                 <ArticleCardCompact

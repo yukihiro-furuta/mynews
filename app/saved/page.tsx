@@ -30,20 +30,20 @@ export default function SavedPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white leading-tight">Saved</h1>
-          <p className="text-xs text-gray-500">{saved.length}件の保存済み記事</p>
+          <h1 className="text-lg font-bold text-text-primary leading-tight">Saved</h1>
+          <p className="text-xs text-text-muted">{saved.length}件の保存済み記事</p>
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto">
         {saved.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-2xl bg-surface-card border border-border flex items-center justify-center mb-5">
               <svg
                 width="28"
                 height="28"
@@ -53,18 +53,18 @@ export default function SavedPage() {
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-gray-600"
+                className="text-text-muted"
               >
                 <path d="M5 3h14a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" />
               </svg>
             </div>
-            <p className="text-base font-semibold text-white mb-2">No saved articles yet</p>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-base font-semibold text-text-primary mb-2">No saved articles yet</p>
+            <p className="text-sm text-text-muted mb-6">
               気になるニュースを保存すると、ここに表示されます
             </p>
             <Link
               href="/"
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
+              className="px-5 py-2.5 bg-accent-blue hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
             >
               ニュースを見る
             </Link>

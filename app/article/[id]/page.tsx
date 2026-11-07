@@ -22,8 +22,8 @@ function pubDateFull(dateStr: string): string {
 export default function ArticleDetailPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-[#0a0a0f] text-gray-100 flex items-center justify-center">
-        <p className="text-gray-500 text-sm">読み込み中...</p>
+      <main className="min-h-screen bg-surface-base text-text-primary flex items-center justify-center">
+        <p className="text-text-muted text-sm">読み込み中...</p>
       </main>
     }>
       <ArticleDetailInner />
@@ -72,26 +72,26 @@ function ArticleDetailInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-gray-100 pb-28">
+    <main className="min-h-screen bg-surface-base text-text-primary pb-28">
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-gray-900">
+      <header className="sticky top-0 z-10 bg-surface-base/95 backdrop-blur-md border-b border-border-subtle">
         <div className="max-w-2xl mx-auto px-2 py-2 flex items-center gap-1">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
             aria-label="戻る"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-gray-300 truncate flex-1">記事詳細</span>
+          <span className="text-sm font-medium text-text-secondary truncate flex-1">記事詳細</span>
           {article && (
             <button
               onClick={handleToggleSave}
               className={`p-2 rounded-xl transition-colors active:scale-90 ${
-                isSaved ? 'text-blue-400 hover:text-blue-300' : 'text-gray-500 hover:text-gray-300'
+                isSaved ? 'text-accent-blue hover:text-blue-300' : 'text-text-muted hover:text-text-secondary'
               }`}
               aria-label={isSaved ? '保存を解除' : '保存する'}
             >
@@ -108,24 +108,24 @@ function ArticleDetailInner() {
         {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-24">
-            <p className="text-gray-500 text-sm">読み込み中...</p>
+            <p className="text-text-muted text-sm">読み込み中...</p>
           </div>
         )}
 
         {/* Not found */}
         {!loading && notFound && (
           <div className="flex flex-col items-center justify-center px-6 py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-5">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-gray-600">
+            <div className="w-16 h-16 rounded-2xl bg-surface-card border border-border flex items-center justify-center mb-5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-text-muted">
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <path d="M7 8h10M7 12h10M7 16h6" />
               </svg>
             </div>
-            <p className="text-base font-semibold text-white mb-2">記事が見つかりません</p>
-            <p className="text-sm text-gray-500 mb-6">この記事はすでに削除されているか、URLが正しくない可能性があります。</p>
+            <p className="text-base font-semibold text-text-primary mb-2">記事が見つかりません</p>
+            <p className="text-sm text-text-muted mb-6">この記事はすでに削除されているか、URLが正しくない可能性があります。</p>
             <button
               onClick={() => router.push('/')}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
+              className="px-5 py-2.5 bg-accent-blue hover:bg-blue-500 text-white text-sm font-medium rounded-full transition-colors"
             >
               ホームへ戻る
             </button>
@@ -147,11 +147,11 @@ function ArticleDetailInner() {
                     (e.target as HTMLImageElement).parentElement!.style.display = 'none';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-surface-base via-surface-base/20 to-transparent" />
               </div>
             ) : (
-              <div className="w-full h-40 bg-gray-900 flex items-center justify-center border-b border-gray-800">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-gray-700">
+              <div className="w-full h-40 bg-surface-card flex items-center justify-center border-b border-border">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" className="text-text-muted">
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <path d="M7 8h10M7 12h10M7 16h6" />
                 </svg>
@@ -164,23 +164,23 @@ function ArticleDetailInner() {
                 <CategoryBadge category={article.category} label={article.categoryLabel} size="md" />
               </div>
 
-              <h1 className="text-lg font-bold text-white leading-snug mb-3">
+              <h1 className="text-lg font-bold text-text-primary leading-snug mb-3">
                 {article.title}
               </h1>
 
               <div className="flex items-center gap-2 mb-6">
-                <span className="text-xs text-gray-400 font-medium">{article.source}</span>
-                <span className="text-gray-700">·</span>
-                <span className="text-xs text-gray-500">{timeAgo(article.pubDate)}</span>
-                <span className="text-gray-700">·</span>
-                <span className="text-xs text-gray-600">{pubDateFull(article.pubDate)}</span>
+                <span className="text-xs text-text-secondary font-medium">{article.source}</span>
+                <span className="text-text-muted">·</span>
+                <span className="text-xs text-text-muted">{timeAgo(article.pubDate)}</span>
+                <span className="text-text-muted">·</span>
+                <span className="text-xs text-text-muted">{pubDateFull(article.pubDate)}</span>
               </div>
 
               {/* Divider */}
-              <div className="border-t border-gray-800 mb-6" />
+              <div className="border-t border-border mb-6" />
 
               {/* No body note */}
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              <p className="text-sm text-text-muted mb-6 leading-relaxed">
                 記事の全文は元のニュースサイトでお読みいただけます。
               </p>
 
@@ -190,7 +190,7 @@ function ArticleDetailInner() {
                   href={article.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold rounded-2xl transition-colors"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-accent-blue hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold rounded-2xl transition-colors"
                 >
                   元記事を読む
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -203,8 +203,8 @@ function ArticleDetailInner() {
                   onClick={handleToggleSave}
                   className={`flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold rounded-2xl border transition-colors ${
                     isSaved
-                      ? 'bg-blue-950/60 border-blue-700/60 text-blue-400 hover:bg-blue-950'
-                      : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                      ? 'bg-blue-950/70 border-blue-700/60 text-accent-blue hover:bg-blue-950'
+                      : 'bg-surface-card border-border text-text-muted hover:text-text-primary hover:border-text-muted'
                   }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
