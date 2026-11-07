@@ -12,6 +12,7 @@ export type Article = {
   category: 'eco' | 'startup' | 'shizuoka' | 'nagano' | 'agri';
   categoryLabel: string;
   image: string | null;
+  description?: string;
 };
 
 type CustomItem = {
@@ -190,6 +191,7 @@ export async function GET() {
           category: feed.category,
           categoryLabel: feed.categoryLabel,
           image: extractImage(item),
+          ...(item.contentSnippet?.trim() ? { description: item.contentSnippet.trim() } : {}),
         }));
         results.push(...items);
       } catch (e) {

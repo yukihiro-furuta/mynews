@@ -41,6 +41,18 @@ function ArticleDetailInner() {
   const [isSaved, setIsSaved] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
 
+  type SummaryState = 'idle' | 'loading' | 'done' | 'error';
+  const [summaryState, setSummaryState] = useState<SummaryState>('idle');
+  const [summary, setSummary] = useState('');
+  const [summaryError, setSummaryError] = useState('');
+
+  type TranslateState = 'idle' | 'loading' | 'done' | 'error';
+  const [translateState, setTranslateState] = useState<TranslateState>('idle');
+  const [translatedTitle, setTranslatedTitle] = useState('');
+  const [translatedDescription, setTranslatedDescription] = useState('');
+  const [translateError, setTranslateError] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     fetch('/api/news')
@@ -63,6 +75,67 @@ function ArticleDetailInner() {
         setLoading(false);
       });
   }, [id]);
+
+  async function handleTranslate() {
+    if (!article || isTranslating) return;
+    setIsTranslating(true);
+    setTranslateState('loading');
+    setTranslateError('');
+    try {
+      const res = await fetch('/api/ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId: article.id,
+          source: article.source,
+          title: article.title,
+          description: article.description,
+        }),
+      });
+      const data = await res.json() as { translatedTitle?: string; translatedDescription?: string; error?: string };
+      if (!res.ok) {
+        setTranslateError(data.error ?? 'エラーが発生しました');
+        setTranslateState('error');
+        return;
+      }
+      setTranslatedTitle(data.translatedTitle ?? '');
+      setTranslatedDescription(data.translatedDescription ?? '');
+      setTranslateState('done');
+    } catch {
+      setTranslateError('ネットワークエラーが発生しました');
+      setTranslateState('error');
+    } finally {
+      setIsTranslating(false);
+    }
+  }
+
+  async function handleSummarize() {
+    if (!article) return;
+    setSummaryState('loading');
+    setSummaryError('');
+    try {
+      const res = await fetch('/api/ai/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId: article.id,
+          title: article.title,
+          description: article.description,
+        }),
+      });
+      const data = await res.json() as { summary?: string; error?: string };
+      if (!res.ok) {
+        setSummaryError(data.error ?? 'エラーが発生しました');
+        setSummaryState('error');
+        return;
+      }
+      setSummary(data.summary ?? '');
+      setSummaryState('done');
+    } catch {
+      setSummaryError('ネットワークエラーが発生しました');
+      setSummaryState('error');
+    }
+  }
 
   function handleToggleSave() {
     if (!article) return;
@@ -178,6 +251,113 @@ function ArticleDetailInner() {
 
               {/* Divider */}
               <div className="border-t border-border mb-6" />
+
+              {/* AI Summary */}
+              <div className="mb-6 rounded-2xl bg-surface-card border border-border overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-accent-blue flex-shrink-0">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                  </svg>
+                  <span className="text-xs font-semibold text-text-secondary tracking-wide">AI要約</span>
+                </div>
+
+                <div className="px-4 py-4">
+                  {summaryState === 'idle' && (
+                    <button
+                      onClick={handleSummarize}
+                      className="w-full py-3 text-sm font-medium text-accent-blue border border-blue-700/50 rounded-xl hover:bg-blue-950/40 active:bg-blue-950/70 transition-colors"
+                    >
+                      AIで要約する
+                    </button>
+                  )}
+
+                  {summaryState === 'loading' && (
+                    <div className="flex items-center justify-center gap-3 py-3">
+                      <svg className="animate-spin text-accent-blue" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" />
+                      </svg>
+                      <span className="text-sm text-text-muted">要約を生成中...</span>
+                    </div>
+                  )}
+
+                  {summaryState === 'done' && (
+                    <div className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+                      {summary}
+                    </div>
+                  )}
+
+                  {summaryState === 'error' && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-red-400">{summaryError}</p>
+                      <button
+                        onClick={handleSummarize}
+                        className="w-full py-2.5 text-sm font-medium text-text-muted border border-border rounded-xl hover:text-text-primary hover:border-text-muted transition-colors"
+                      >
+                        再試行する
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Translation — TechCrunch only */}
+              {article.source === 'TechCrunch' && (
+                <div className="mb-6 rounded-2xl bg-surface-card border border-border overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400 flex-shrink-0">
+                      <path d="M5 8l4 4 4-4M5 16l4-4 4 4" />
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                    </svg>
+                    <span className="text-xs font-semibold text-text-secondary tracking-wide">日本語翻訳</span>
+                  </div>
+
+                  <div className="px-4 py-4">
+                    {translateState === 'idle' && (
+                      <button
+                        onClick={handleTranslate}
+                        className="w-full py-3 text-sm font-medium text-emerald-400 border border-emerald-700/50 rounded-xl hover:bg-emerald-950/40 active:bg-emerald-950/70 transition-colors"
+                      >
+                        日本語に翻訳する
+                      </button>
+                    )}
+
+                    {translateState === 'loading' && (
+                      <div className="flex items-center justify-center gap-3 py-3">
+                        <svg className="animate-spin text-emerald-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M21 12a9 9 0 11-6.219-8.56" />
+                        </svg>
+                        <span className="text-sm text-text-muted">翻訳中...</span>
+                      </div>
+                    )}
+
+                    {translateState === 'done' && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold text-text-primary leading-snug">
+                          {translatedTitle}
+                        </p>
+                        {translatedDescription && (
+                          <p className="text-sm text-text-secondary leading-relaxed">
+                            {translatedDescription}
+                          </p>
+                        )}
+                        <p className="text-xs text-text-muted">※ タイトルと記事概要の翻訳です</p>
+                      </div>
+                    )}
+
+                    {translateState === 'error' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-red-400">{translateError}</p>
+                        <button
+                          onClick={handleTranslate}
+                          className="w-full py-2.5 text-sm font-medium text-text-muted border border-border rounded-xl hover:text-text-primary hover:border-text-muted transition-colors"
+                        >
+                          再試行する
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* No body note */}
               <p className="text-sm text-text-muted mb-6 leading-relaxed">
