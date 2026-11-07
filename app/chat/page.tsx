@@ -6,8 +6,36 @@ import {
   loadConversations,
   saveConversation,
   appendMessage,
+  updateConversation,
   type SavedMessage,
 } from '@/lib/chatHistory';
+
+async function generateAndSaveTitle(
+  convId: string,
+  userContent: string,
+  assistantContent: string,
+): Promise<void> {
+  try {
+    const res = await fetch('/api/ai/titlegen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'user', content: userContent },
+          { role: 'assistant', content: assistantContent },
+        ],
+      }),
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { title?: string };
+    const raw = data.title ?? '';
+    const title = Array.from(raw.trim()).slice(0, 30).join('');
+    if (!title) return;
+    updateConversation(convId, { title });
+  } catch {
+    // ベストエフォート: 失敗しても会話保存・チャットに影響しない
+  }
+}
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
@@ -93,6 +121,8 @@ export default function ChatPage() {
     const trimmed = input.trim();
     if (!trimmed || loading || trimmed.length > MAX_CHARS) return;
 
+    const isFirstMessage = convId === null;
+
     const userMsg: SavedMessage = { role: 'user', content: trimmed };
     const nextMessages = [...messages, { role: 'user' as const, content: trimmed }];
     setMessages(nextMessages);
@@ -138,6 +168,8 @@ export default function ChatPage() {
         if (!result.ok) {
           const msg = toSaveErrorMessage(result.reason);
           if (msg) setSaveError(msg);
+        } else if (isFirstMessage) {
+          void generateAndSaveTitle(activeConvId, trimmed, reply);
         }
       }
     }
