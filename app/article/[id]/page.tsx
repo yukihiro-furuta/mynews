@@ -7,6 +7,11 @@ import BottomNav from '@/components/BottomNav';
 import CategoryBadge from '@/components/CategoryBadge';
 import { loadSaved, toggleSaved } from '@/lib/savedArticles';
 import { timeAgo } from '@/lib/timeAgo';
+import {
+  saveAnalysis,
+  computeContentHash,
+  type AnalysisEntry,
+} from '@/lib/analysisHistory';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const CHAT_MAX_SEND_MESSAGES = 10; // APIへ送信する最大件数
@@ -61,12 +66,17 @@ function ArticleDetailInner() {
   const [analysis, setAnalysis] = useState('');
   const [analyzeError, setAnalyzeError] = useState('');
 
+  type SaveAnalysisState = 'idle' | 'saving' | 'saved' | 'error';
+  const [saveAnalysisState, setSaveAnalysisState] = useState<SaveAnalysisState>('idle');
+  const [saveAnalysisError, setSaveAnalysisError] = useState('');
+
   // チャット状態
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     if (!id) return;
@@ -115,9 +125,52 @@ function ArticleDetailInner() {
       }
       setAnalysis(data.analysis ?? '');
       setAnalyzeState('done');
+      // Reset save state so user must explicitly save the new analysis
+      setSaveAnalysisState('idle');
+      setSaveAnalysisError('');
     } catch {
       setAnalyzeError('ネットワークエラーが発生しました');
       setAnalyzeState('error');
+    }
+  }
+
+  async function handleSaveAnalysis() {
+    if (!article || isSavingRef.current) return;
+    isSavingRef.current = true;
+    setSaveAnalysisState('saving');
+    setSaveAnalysisError('');
+    try {
+      const contentHash = await computeContentHash(article.title, article.description);
+      const entry: AnalysisEntry = {
+        articleId: article.id,
+        title: article.title,
+        link: article.link,
+        source: article.source,
+        category: article.category,
+        pubDate: article.pubDate,
+        savedAt: new Date().toISOString(),
+        analysis,
+        contentHash,
+      };
+      const result = saveAnalysis(entry);
+      if (result.ok) {
+        setSaveAnalysisState('saved');
+      } else {
+        const reasonMap: Record<string, string> = {
+          storage_full: 'ストレージ容量が不足しています',
+          invalid: '分析データが不正です',
+          unsupported_version: 'データ形式が変更されています。ページを再読み込みしてください',
+          access_error: 'ストレージへのアクセスに失敗しました',
+          parse_error: 'ストレージデータが破損しています。ブラウザのデータを確認してください',
+        };
+        setSaveAnalysisError(reasonMap[result.reason] ?? '保存に失敗しました');
+        setSaveAnalysisState('error');
+      }
+    } catch {
+      setSaveAnalysisError('保存処理中にエラーが発生しました');
+      setSaveAnalysisState('error');
+    } finally {
+      isSavingRef.current = false;
     }
   }
 
@@ -523,6 +576,49 @@ function ArticleDetailInner() {
                       </p>
                       <div className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
                         {analysis}
+                      </div>
+                      {/* Manual save controls */}
+                      <div className="pt-2 border-t border-border">
+                        {saveAnalysisState === 'idle' && (
+                          <button
+                            onClick={() => void handleSaveAnalysis()}
+                            className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-700/50 rounded-xl px-3 py-2 transition-colors hover:bg-amber-950/40 active:bg-amber-950/70"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                              <polyline points="17 21 17 13 7 13 7 21" />
+                              <polyline points="7 3 7 8 15 8" />
+                            </svg>
+                            分析結果を保存
+                          </button>
+                        )}
+                        {saveAnalysisState === 'saving' && (
+                          <span className="flex items-center gap-1.5 text-xs text-text-muted">
+                            <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <path d="M21 12a9 9 0 11-6.219-8.56" />
+                            </svg>
+                            保存中...
+                          </span>
+                        )}
+                        {saveAnalysisState === 'saved' && (
+                          <span className="flex items-center gap-1.5 text-xs text-emerald-400">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            保存済み
+                          </span>
+                        )}
+                        {saveAnalysisState === 'error' && (
+                          <div className="space-y-1.5">
+                            <p className="text-xs text-red-400">{saveAnalysisError}</p>
+                            <button
+                              onClick={() => void handleSaveAnalysis()}
+                              className="text-xs text-text-muted border border-border rounded-xl px-3 py-1.5 hover:text-text-primary hover:border-text-muted transition-colors"
+                            >
+                              再試行
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
