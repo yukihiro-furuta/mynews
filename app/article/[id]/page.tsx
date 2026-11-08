@@ -56,6 +56,11 @@ function ArticleDetailInner() {
   const [translateError, setTranslateError] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
 
+  type AnalyzeState = 'idle' | 'loading' | 'done' | 'error';
+  const [analyzeState, setAnalyzeState] = useState<AnalyzeState>('idle');
+  const [analysis, setAnalysis] = useState('');
+  const [analyzeError, setAnalyzeError] = useState('');
+
   // チャット状態
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -85,6 +90,36 @@ function ArticleDetailInner() {
         setLoading(false);
       });
   }, [id]);
+
+  async function handleAnalyze() {
+    if (!article) return;
+    setAnalyzeState('loading');
+    setAnalyzeError('');
+    try {
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId: article.id,
+          title: article.title,
+          description: article.description,
+          source: article.source,
+          mode: 'deep',
+        }),
+      });
+      const data = await res.json() as { analysis?: string; error?: string };
+      if (!res.ok) {
+        setAnalyzeError(data.error ?? 'エラーが発生しました');
+        setAnalyzeState('error');
+        return;
+      }
+      setAnalysis(data.analysis ?? '');
+      setAnalyzeState('done');
+    } catch {
+      setAnalyzeError('ネットワークエラーが発生しました');
+      setAnalyzeState('error');
+    }
+  }
 
   async function handleTranslate() {
     if (!article || isTranslating) return;
@@ -449,6 +484,62 @@ function ArticleDetailInner() {
                   </div>
                 </div>
               )}
+
+              {/* AI Deep Analysis */}
+              <div className="mb-6 rounded-2xl bg-surface-card border border-border overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400 flex-shrink-0">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                  <span className="text-xs font-semibold text-text-secondary tracking-wide">AI詳細分析</span>
+                </div>
+
+                <div className="px-4 py-4">
+                  {analyzeState === 'idle' && (
+                    <button
+                      onClick={() => void handleAnalyze()}
+                      className="w-full py-3 text-sm font-medium text-amber-400 border border-amber-700/50 rounded-xl hover:bg-amber-950/40 active:bg-amber-950/70 transition-colors"
+                    >
+                      AIで深掘り分析する
+                    </button>
+                  )}
+
+                  {analyzeState === 'loading' && (
+                    <div className="flex items-center justify-center gap-3 py-3">
+                      <svg className="animate-spin text-amber-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" />
+                      </svg>
+                      <span className="text-sm text-text-muted">分析中...</span>
+                    </div>
+                  )}
+
+                  {analyzeState === 'done' && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-amber-400/80 leading-relaxed">
+                        ※ この分析はニュースのタイトルとRSS概要に基づいています。記事全文を確認した分析ではありません。詳細は元記事をご確認ください。
+                      </p>
+                      <div className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+                        {analysis}
+                      </div>
+                    </div>
+                  )}
+
+                  {analyzeState === 'error' && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-red-400">{analyzeError}</p>
+                      <button
+                        onClick={() => void handleAnalyze()}
+                        className="w-full py-2.5 text-sm font-medium text-text-muted border border-border rounded-xl hover:text-text-primary hover:border-text-muted transition-colors"
+                      >
+                        再試行する
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* No body note */}
               <p className="text-sm text-text-muted mb-6 leading-relaxed">
