@@ -12,9 +12,26 @@ import {
   computeContentHash,
   type AnalysisEntry,
 } from '@/lib/analysisHistory';
+import {
+  loadConversations,
+  saveConversation,
+  appendMessage,
+  deleteConversation,
+} from '@/lib/chatHistory';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const CHAT_MAX_SEND_MESSAGES = 10; // APIへ送信する最大件数
+
+function toChatSaveErrorMessage(reason: string): string {
+  switch (reason) {
+    case 'limit_reached': return '保存上限に達したため、以降の会話は保存されません。';
+    case 'storage_full': return '保存容量が不足しているため、会話を保存できません。';
+    case 'unsupported_version': return '保存データの形式が対応していないため、会話を保存できません。';
+    case 'not_found': return '保存データが見つかりません。会話は保存されていない可能性があります。';
+    case 'invalid': return '会話を保存できませんでした。';
+    default: return '';
+  }
+}
 
 function pubDateFull(dateStr: string): string {
   if (!dateStr) return '';
@@ -75,8 +92,11 @@ function ArticleDetailInner() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
+  const [chatSaveError, setChatSaveError] = useState('');
+  const [convId, setConvId] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const isSavingRef = useRef(false);
+  const restoredForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -100,6 +120,19 @@ function ArticleDetailInner() {
         setLoading(false);
       });
   }, [id]);
+
+  useEffect(() => {
+    if (!article) return;
+    if (restoredForRef.current === article.id) return;
+    restoredForRef.current = article.id;
+    const existing = loadConversations().find(
+      (c) => c.kind === 'article' && c.articleId === article.id
+    );
+    if (existing) {
+      setConvId(existing.id);
+      setChatMessages(existing.messages);
+    }
+  }, [article]);
 
   async function handleAnalyze() {
     if (!article) return;
@@ -250,6 +283,37 @@ function ArticleDetailInner() {
     setChatInput('');
     setChatLoading(true);
     setChatError('');
+    setChatSaveError('');
+
+    // ユーザーメッセージをAPI送信前に保存
+    let activeConvId = convId;
+    if (activeConvId === null) {
+      const newId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const result = saveConversation({
+        id: newId,
+        title: article.title,
+        kind: 'article',
+        articleId: article.id,
+        articleTitle: article.title,
+        messages: [{ role: 'user', content: userMessage.content }],
+        createdAt: now,
+        updatedAt: now,
+      });
+      if (result.ok) {
+        activeConvId = newId;
+        setConvId(newId);
+      } else {
+        const msg = toChatSaveErrorMessage(result.reason);
+        if (msg) setChatSaveError(msg);
+      }
+    } else {
+      const result = appendMessage(activeConvId, { role: 'user', content: userMessage.content });
+      if (!result.ok) {
+        const msg = toChatSaveErrorMessage(result.reason);
+        if (msg) setChatSaveError(msg);
+      }
+    }
 
     // 送信するのは末尾 CHAT_MAX_SEND_MESSAGES 件のみ
     const messagesToSend = nextMessages.slice(-CHAT_MAX_SEND_MESSAGES);
@@ -271,8 +335,16 @@ function ArticleDetailInner() {
         setChatError(data.error ?? 'エラーが発生しました');
         return;
       }
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply ?? '' }]);
+      const reply = data.reply ?? '';
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
       setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      if (activeConvId !== null) {
+        const result = appendMessage(activeConvId, { role: 'assistant', content: reply });
+        if (!result.ok) {
+          const msg = toChatSaveErrorMessage(result.reason);
+          if (msg) setChatSaveError(msg);
+        }
+      }
     } catch {
       setChatError('ネットワークエラーが発生しました');
     } finally {
@@ -281,9 +353,19 @@ function ArticleDetailInner() {
   }
 
   function handleChatReset() {
+    if (convId !== null) {
+      if (!window.confirm('会話履歴を削除しますか？')) return;
+      const ok = deleteConversation(convId);
+      if (!ok) {
+        setChatSaveError('会話の削除に失敗しました。');
+        return;
+      }
+    }
     setChatMessages([]);
     setChatInput('');
     setChatError('');
+    setChatSaveError('');
+    setConvId(null);
   }
 
   function handleChatRetry() {
@@ -295,9 +377,11 @@ function ArticleDetailInner() {
     const retryMessages = chatMessages.slice(0, idx + 1);
     setChatMessages(retryMessages);
     setChatError('');
+    setChatSaveError('');
     setChatLoading(true);
 
     const messagesToSend = retryMessages.slice(-CHAT_MAX_SEND_MESSAGES);
+    const retryConvId = convId;
 
     fetch('/api/ai/chat', {
       method: 'POST',
@@ -316,8 +400,16 @@ function ArticleDetailInner() {
           setChatError(data.error ?? 'エラーが発生しました');
           return;
         }
-        setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply ?? '' }]);
+        const reply = data.reply ?? '';
+        setChatMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
         setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        if (retryConvId !== null) {
+          const result = appendMessage(retryConvId, { role: 'assistant', content: reply });
+          if (!result.ok) {
+            const msg = toChatSaveErrorMessage(result.reason);
+            if (msg) setChatSaveError(msg);
+          }
+        }
       })
       .catch(() => setChatError('ネットワークエラーが発生しました'))
       .finally(() => setChatLoading(false));
@@ -745,6 +837,13 @@ function ArticleDetailInner() {
                       </button>
                     </div>
                   )}
+
+                  {/* Save error */}
+                  {chatSaveError && (
+                    <div className="mb-3 rounded-xl bg-amber-950/20 border border-amber-800/30 px-3 py-2">
+                      <p className="text-xs text-amber-400">{chatSaveError}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Input area */}
@@ -783,7 +882,7 @@ function ArticleDetailInner() {
                   </button>
                 </div>
                 <p className="px-4 pb-3 text-xs text-text-muted">
-                  ※ タイトルとRSS概要をもとに回答します。ページを離れると会話は消えます。
+                  ※ タイトルとRSS概要をもとに回答します。会話は自動保存されます。保存上限（30件）に達した場合は保存されません。
                 </p>
               </div>
             </div>
