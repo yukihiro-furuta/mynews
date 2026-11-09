@@ -121,13 +121,17 @@ export default function ChatPage() {
 
   // Returns the AI reply string on success, null on error
   async function callApi(apiMessages: ChatMessage[]): Promise<string | null> {
+    if (apiMessages.length === 0) {
+      setError('送信できるメッセージがありません');
+      return null;
+    }
     setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/ai/generalchat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages.slice(-MAX_SEND_MESSAGES) }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
       const data = (await res.json()) as { reply?: string; error?: string };
       if (!res.ok) {
@@ -150,6 +154,14 @@ export default function ChatPage() {
     const firstUserIdx = allMessages.findIndex((m) => m.role === 'user');
     if (firstUserIdx === -1) return [];
     return allMessages.slice(firstUserIdx);
+  }
+
+  function buildSendMessages(allMessages: ChatMessage[]): ChatMessage[] {
+    const full = buildApiMessages(allMessages);
+    const sliced = full.slice(-MAX_SEND_MESSAGES);
+    const firstUserIdx = sliced.findIndex((m) => m.role === 'user');
+    if (firstUserIdx === -1) return [];
+    return firstUserIdx === 0 ? sliced : sliced.slice(firstUserIdx);
   }
 
   async function handleSend() {
@@ -193,7 +205,7 @@ export default function ChatPage() {
       }
     }
 
-    const reply = await callApi(buildApiMessages(nextMessages));
+    const reply = await callApi(buildSendMessages(nextMessages));
 
     if (reply !== null && activeConvId !== null) {
       if (reply.length > MAX_AI_REPLY_CHARS) {
@@ -227,7 +239,7 @@ export default function ChatPage() {
 
     // User message is already saved; only save the AI reply on success
     void (async () => {
-      const reply = await callApi(buildApiMessages(retryMessages));
+      const reply = await callApi(buildSendMessages(retryMessages));
       if (reply !== null && convId !== null) {
         if (reply.length > MAX_AI_REPLY_CHARS) {
           setSaveError('AIの回答が長すぎるため保存できませんでした（5,000文字を超えています）。');
@@ -282,6 +294,7 @@ export default function ChatPage() {
   const hasUserMessages = messages.some((m) => m.role === 'user');
   const charCount = input.length;
   const nearLimit = charCount > 400;
+  const omittedCount = Math.max(0, buildApiMessages(messages).length - buildSendMessages(messages).length);
 
   return (
     <main className="h-dvh flex flex-col bg-surface-base text-text-primary overflow-hidden">
@@ -445,6 +458,14 @@ export default function ChatPage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '150ms' }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
+                </div>
+              )}
+
+              {omittedCount > 0 && (
+                <div className="bg-amber-950/20 border border-amber-800/30 rounded-2xl px-4 py-2.5">
+                  <p className="text-xs text-amber-400">
+                    古いメッセージ {omittedCount} 件はAIに送信されません（直近10件のみ送信）
+                  </p>
                 </div>
               )}
 

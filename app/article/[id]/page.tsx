@@ -22,6 +22,13 @@ import {
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const CHAT_MAX_SEND_MESSAGES = 10; // APIへ送信する最大件数
 
+function buildChatSendMessages(msgs: ChatMessage[]): ChatMessage[] {
+  const sliced = msgs.slice(-CHAT_MAX_SEND_MESSAGES);
+  const firstUserIdx = sliced.findIndex((m) => m.role === 'user');
+  if (firstUserIdx === -1) return [];
+  return firstUserIdx === 0 ? sliced : sliced.slice(firstUserIdx);
+}
+
 function toChatSaveErrorMessage(reason: string): string {
   switch (reason) {
     case 'limit_reached': return '保存上限に達したため、以降の会話は保存されません。';
@@ -315,8 +322,13 @@ function ArticleDetailInner() {
       }
     }
 
-    // 送信するのは末尾 CHAT_MAX_SEND_MESSAGES 件のみ
-    const messagesToSend = nextMessages.slice(-CHAT_MAX_SEND_MESSAGES);
+    // 送信するのは末尾 CHAT_MAX_SEND_MESSAGES 件のみ（先頭が user になるよう正規化）
+    const messagesToSend = buildChatSendMessages(nextMessages);
+    if (messagesToSend.length === 0) {
+      setChatError('送信できるメッセージがありません');
+      setChatLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch('/api/ai/chat', {
@@ -380,7 +392,12 @@ function ArticleDetailInner() {
     setChatSaveError('');
     setChatLoading(true);
 
-    const messagesToSend = retryMessages.slice(-CHAT_MAX_SEND_MESSAGES);
+    const messagesToSend = buildChatSendMessages(retryMessages);
+    if (messagesToSend.length === 0) {
+      setChatError('送信できるメッセージがありません');
+      setChatLoading(false);
+      return;
+    }
     const retryConvId = convId;
 
     fetch('/api/ai/chat', {
@@ -414,6 +431,8 @@ function ArticleDetailInner() {
       .catch(() => setChatError('ネットワークエラーが発生しました'))
       .finally(() => setChatLoading(false));
   }
+
+  const chatOmittedCount = Math.max(0, chatMessages.length - buildChatSendMessages(chatMessages).length);
 
   return (
     <main className="min-h-screen bg-surface-base text-text-primary pb-28">
@@ -821,6 +840,14 @@ function ArticleDetailInner() {
                         </div>
                       )}
                       <div ref={chatBottomRef} />
+                    </div>
+                  )}
+
+                  {chatOmittedCount > 0 && (
+                    <div className="mb-3 rounded-xl bg-amber-950/20 border border-amber-800/30 px-3 py-2">
+                      <p className="text-xs text-amber-400">
+                        古いメッセージ {chatOmittedCount} 件はAIに送信されません（直近10件のみ送信）
+                      </p>
                     </div>
                   )}
 
